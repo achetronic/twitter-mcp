@@ -11,27 +11,27 @@ Use this format when writing release notes. Keep it friendly, concise, and usefu
 
 One or two sentences describing what this release is about. For major releases, highlight the big picture. For patches, be specific about what's fixed.
 
-## What's new
+## ✨ What's new
 
 Short paragraphs or bullet points grouped by theme. Don't list every single commit—focus on what matters to users.
 
 **Theme or area** — Description of what changed and why it's useful. If there are multiple related changes, group them together.
 
-## Breaking changes
+## 💥 Breaking changes
 
 Only if applicable. Be clear about what breaks and how to migrate.
 
-## Bug fixes
+## 🐛 Bug fixes
 
 Only if applicable. Brief descriptions, no need to reference issue numbers unless they add context.
 
-## Notes
+## 📝 Notes
 
 Any caveats, known issues, or things users should be aware of.
 
 ---
 
-## Checksums
+## 🔐 Checksums
 
 SHA256 checksums are provided for all binaries.
 ```
@@ -45,7 +45,7 @@ SHA256 checksums are provided for all binaries.
 
 First release. A Model Context Protocol server that lets AI assistants interact with Twitter/X—read timelines, post tweets, analyze trends, and more.
 
-## What's new
+## ✨ What's new
 
 **Reading tools** — Fetch your home timeline, mentions, search tweets, explore trending topics by location, view user profiles and their tweets, access bookmarks and DMs.
 
@@ -57,7 +57,7 @@ First release. A Model Context Protocol server that lets AI assistants interact 
 
 **Security (HTTP mode)** — JWT validation with JWKS caching, tool-level access control using CEL expressions, policies based on JWT claims (groups, scopes), OAuth 2.0 metadata endpoints (RFC 9728), and access logging with header redaction.
 
-## Platforms
+## 📦 Platforms
 
 Binaries available for Linux (amd64, arm64), macOS (amd64, arm64), and Windows (amd64).
 
@@ -65,7 +65,7 @@ Docker images at `ghcr.io/achetronic/twitter-mcp:v0.1.0` for linux/amd64 and lin
 
 ---
 
-## Checksums
+## 🔐 Checksums
 
 SHA256 checksums are provided for all binaries.
 ```
@@ -80,7 +80,7 @@ SHA256 checksums are provided for all binaries.
 
 3. **Skip the noise** — Internal refactors, dependency bumps, and CI tweaks don't need to be in release notes unless they affect users.
 
-4. **One emoji max** — In the title if you really want. None is also fine.
+4. **One emoji per header** — Keep it minimal. Just the section headers, not every line.
 
 5. **Keep it scannable** — Bold the theme/area, then explain. People skim.
 
