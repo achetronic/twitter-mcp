@@ -22,7 +22,7 @@ env:
 jobs:
   build-binaries:
     name: Build Binaries
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs_on || 'ubuntu-latest' }}
     strategy:
       matrix:
         include:
@@ -31,9 +31,8 @@ jobs:
           - goos: linux
             goarch: arm64
           - goos: darwin
-            goarch: amd64
-          - goos: darwin
             goarch: arm64
+            runs_on: macos-14
           - goos: windows
             goarch: amd64
             ext: .exe

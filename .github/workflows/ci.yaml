@@ -45,7 +45,7 @@ jobs:
 
   build:
     name: Build
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runs_on || 'ubuntu-latest' }}
     needs: [lint, test]
     strategy:
       matrix:
@@ -55,9 +55,8 @@ jobs:
           - goos: linux
             goarch: arm64
           - goos: darwin
-            goarch: amd64
-          - goos: darwin
             goarch: arm64
+            runs_on: macos-14
           - goos: windows
             goarch: amd64
             ext: .exe
