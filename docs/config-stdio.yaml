@@ -1,0 +1,15 @@
+# Twitter MCP Configuration - STDIO mode (simplest)
+# Use this for local development or when running as a subprocess
+
+server:
+  name: "twitter-mcp"
+  version: "0.1.0"
+  transport:
+    type: "stdio"
+
+twitter:
+  api_key: "$TWITTER_API_KEY"
+  api_key_secret: "$TWITTER_API_KEY_SECRET"
+  access_token: "$TWITTER_ACCESS_TOKEN"
+  access_token_secret: "$TWITTER_ACCESS_TOKEN_SECRET"
+  bearer_token: "$TWITTER_BEARER_TOKEN"

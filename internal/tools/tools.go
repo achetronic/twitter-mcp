@@ -2,6 +2,7 @@ package tools
 
 import (
 	"twitter-mcp/internal/globals"
+	"twitter-mcp/internal/middlewares"
 	"twitter-mcp/internal/twitter"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -12,6 +13,7 @@ type ToolsManagerDependencies struct {
 	AppCtx *globals.ApplicationContext
 
 	McpServer     *server.MCPServer
+	Middlewares   []middlewares.ToolMiddleware
 	TwitterClient *twitter.Client
 }
 

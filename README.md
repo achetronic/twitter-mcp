@@ -31,24 +31,19 @@ Head to the [Twitter Developer Portal](https://developer.twitter.com/en/portal/d
 
 > ⚠️ Heads up: Twitter's free tier is very limited. For full functionality (trends, search, timeline), you'll need at least the Basic tier ($100/month).
 
-### 2. Create your config file
+### 2. Choose your transport mode
+
+Twitter MCP supports two transport modes:
+
+#### STDIO (simple, for local use)
 
 ```yaml
 server:
   name: "twitter-mcp"
   version: "0.1.0"
+  transport:
+    type: "stdio"
 
-twitter:
-  api_key: "your-api-key"
-  api_key_secret: "your-api-key-secret"
-  access_token: "your-access-token"
-  access_token_secret: "your-access-token-secret"
-  bearer_token: "your-bearer-token"
-```
-
-You can also use environment variables:
-
-```yaml
 twitter:
   api_key: "$TWITTER_API_KEY"
   api_key_secret: "$TWITTER_API_KEY_SECRET"
@@ -56,6 +51,36 @@ twitter:
   access_token_secret: "$TWITTER_ACCESS_TOKEN_SECRET"
   bearer_token: "$TWITTER_BEARER_TOKEN"
 ```
+
+#### HTTP (production, with auth support)
+
+```yaml
+server:
+  name: "twitter-mcp"
+  version: "0.1.0"
+  transport:
+    type: "http"
+    http:
+      host: ":8080"
+
+middleware:
+  access_logs:
+    excluded_headers: ["Accept", "Accept-Encoding"]
+    redacted_headers: ["Authorization"]
+  jwt:
+    enabled: true
+    validation:
+      strategy: "local"
+      local:
+        jwks_uri: "https://your-idp.com/.well-known/jwks.json"
+        cache_interval: 5m
+
+twitter:
+  api_key: "$TWITTER_API_KEY"
+  # ... rest of credentials
+```
+
+See `docs/config-stdio.yaml` and `docs/config-http.yaml` for full examples.
 
 ### 3. Build and run
 
@@ -65,7 +90,7 @@ go build -o twitter-mcp ./cmd/main.go
 ./twitter-mcp -config config.yaml
 ```
 
-Or just use the Makefile:
+Or use the Makefile:
 
 ```bash
 make build
@@ -129,6 +154,17 @@ When you call `get_topics_heat` with a list of topics, it returns something like
 ```
 
 The score (0-100) combines tweet volume and engagement. Results come sorted from hottest to coldest, so you can quickly see what's getting attention.
+
+## Authentication & Security
+
+When running in HTTP mode, Twitter MCP supports:
+
+- **JWT validation** with JWKS endpoint caching
+- **CEL expressions** for fine-grained access control
+- **OAuth 2.0 metadata endpoints** (RFC 9728 compliant)
+- **Access logging** with header redaction
+
+This makes it suitable for production deployments behind an identity provider like Keycloak, Auth0, or similar.
 
 ## Location codes for trends
 
