@@ -27,6 +27,15 @@ func NewToolsManager(deps ToolsManagerDependencies) *ToolsManager {
 	}
 }
 
+// wrapWithMiddlewares applies all configured middlewares to a tool handler
+func (tm *ToolsManager) wrapWithMiddlewares(handler server.ToolHandlerFunc) server.ToolHandlerFunc {
+	// Apply middlewares in reverse order so the first middleware in the list is the outermost
+	for i := len(tm.dependencies.Middlewares) - 1; i >= 0; i-- {
+		handler = tm.dependencies.Middlewares[i].Middleware(handler)
+	}
+	return handler
+}
+
 func (tm *ToolsManager) AddTools() {
 	// post_tweet - Post a new tweet
 	tool := mcp.NewTool("post_tweet",
@@ -39,7 +48,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("Optional: Tweet ID to reply to"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolPostTweet)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolPostTweet))
 
 	// delete_tweet - Delete a tweet
 	tool = mcp.NewTool("delete_tweet",
@@ -49,7 +58,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("The ID of the tweet to delete"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolDeleteTweet)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolDeleteTweet))
 
 	// get_timeline - Get home timeline
 	tool = mcp.NewTool("get_timeline",
@@ -58,7 +67,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("Maximum number of tweets to return (default: 10, max: 100)"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolGetTimeline)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetTimeline))
 
 	// get_mentions - Get mentions
 	tool = mcp.NewTool("get_mentions",
@@ -67,7 +76,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("Maximum number of mentions to return (default: 10, max: 100)"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolGetMentions)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetMentions))
 
 	// search_tweets - Search for tweets
 	tool = mcp.NewTool("search_tweets",
@@ -80,7 +89,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("Maximum number of tweets to return (default: 10, max: 100)"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolSearchTweets)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolSearchTweets))
 
 	// get_trends - Get trending topics
 	tool = mcp.NewTool("get_trends",
@@ -89,7 +98,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("Where On Earth ID for location (default: 1 = Worldwide)"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolGetTrends)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetTrends))
 
 	// search_topics - Search for content across multiple topics
 	tool = mcp.NewTool("search_topics",
@@ -102,7 +111,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("Maximum number of tweets per topic (default: 5, max: 20)"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolSearchTopics)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolSearchTopics))
 
 	// get_topics_heat - Get heat/popularity score for topics
 	tool = mcp.NewTool("get_topics_heat",
@@ -115,13 +124,13 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("Number of tweets to sample per topic for analysis (default: 20, max: 100)"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolGetTopicsHeat)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetTopicsHeat))
 
 	// get_me - Get authenticated user info
 	tool = mcp.NewTool("get_me",
 		mcp.WithDescription("Get information about the authenticated Twitter user"),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolGetMe)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetMe))
 
 	// like_tweet - Like a tweet
 	tool = mcp.NewTool("like_tweet",
@@ -131,7 +140,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("The ID of the tweet to like"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolLikeTweet)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolLikeTweet))
 
 	// unlike_tweet - Remove like from a tweet
 	tool = mcp.NewTool("unlike_tweet",
@@ -141,7 +150,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("The ID of the tweet to unlike"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolUnlikeTweet)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolUnlikeTweet))
 
 	// retweet - Retweet a tweet
 	tool = mcp.NewTool("retweet",
@@ -151,7 +160,7 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("The ID of the tweet to retweet"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolRetweet)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolRetweet))
 
 	// undo_retweet - Remove a retweet
 	tool = mcp.NewTool("undo_retweet",
@@ -161,5 +170,5 @@ func (tm *ToolsManager) AddTools() {
 			mcp.Description("The ID of the tweet to un-retweet"),
 		),
 	)
-	tm.dependencies.McpServer.AddTool(tool, tm.HandleToolUndoRetweet)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolUndoRetweet))
 }

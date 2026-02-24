@@ -1,4 +1,4 @@
-# Twitter MCP Configuration - HTTP mode with full auth
+# Twitter MCP Configuration - HTTP mode with full auth and policies
 # Use this for production deployments with OAuth/JWT authentication
 
 server:
@@ -29,6 +29,51 @@ middleware:
         allow_conditions:
           - expression: 'has(payload.scope) && payload.scope.contains("twitter:read")'
           - expression: 'payload.iss == "https://your-idp.com"'
+
+# Tool access policies based on JWT claims
+# First matching policy wins - order matters!
+policies:
+  tools:
+    # Admins can do everything
+    - expression: 'has(payload.groups) && payload.groups.exists(g, g == "admins")'
+      allowed_tools: ["*"]
+    
+    # Writers can post, like, retweet
+    - expression: 'has(payload.groups) && payload.groups.exists(g, g == "writers")'
+      allowed_tools:
+        - "post_tweet"
+        - "delete_tweet"
+        - "like_tweet"
+        - "unlike_tweet"
+        - "retweet"
+        - "undo_retweet"
+        - "get_*"  # Also allow all read operations
+    
+    # Readers can only read
+    - expression: 'has(payload.groups) && payload.groups.exists(g, g == "readers")'
+      allowed_tools:
+        - "get_timeline"
+        - "get_mentions"
+        - "get_trends"
+        - "get_me"
+        - "get_topics_heat"
+        - "search_tweets"
+        - "search_topics"
+    
+    # Users with twitter:write scope can write
+    - expression: 'has(payload.scope) && payload.scope.contains("twitter:write")'
+      allowed_tools:
+        - "post_tweet"
+        - "delete_tweet"
+        - "like_*"
+        - "retweet"
+        - "undo_retweet"
+    
+    # Users with twitter:read scope can read
+    - expression: 'has(payload.scope) && payload.scope.contains("twitter:read")'
+      allowed_tools:
+        - "get_*"
+        - "search_*"
 
 oauth_authorization_server:
   enabled: true

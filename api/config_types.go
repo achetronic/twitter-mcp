@@ -85,6 +85,17 @@ type OAuthProtectedResourceConfig struct {
 	DPoPBoundAccessTokensRequired         bool     `yaml:"dpop_bound_access_tokens_required,omitempty"`
 }
 
+// ToolPolicyConfig represents a policy for tool access control
+type ToolPolicyConfig struct {
+	Expression   string   `yaml:"expression"`
+	AllowedTools []string `yaml:"allowed_tools"`
+}
+
+// PoliciesConfig represents the policies configuration section
+type PoliciesConfig struct {
+	Tools []ToolPolicyConfig `yaml:"tools"`
+}
+
 // TwitterConfig represents the Twitter/X API configuration
 type TwitterConfig struct {
 	// OAuth 1.0a credentials (for v1.1 API - posting tweets, etc.)
@@ -101,6 +112,7 @@ type TwitterConfig struct {
 type Configuration struct {
 	Server                   ServerConfig                 `yaml:"server,omitempty"`
 	Middleware               MiddlewareConfig             `yaml:"middleware,omitempty"`
+	Policies                 PoliciesConfig               `yaml:"policies,omitempty"`
 	OAuthAuthorizationServer OAuthAuthorizationServer     `yaml:"oauth_authorization_server,omitempty"`
 	OAuthProtectedResource   OAuthProtectedResourceConfig `yaml:"oauth_protected_resource,omitempty"`
 	Twitter                  TwitterConfig                `yaml:"twitter"`

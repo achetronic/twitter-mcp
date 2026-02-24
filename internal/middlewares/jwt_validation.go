@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -12,6 +13,11 @@ import (
 
 	"github.com/google/cel-go/cel"
 )
+
+// JWTContextKey is the key used to store the JWT in context
+type contextKey string
+
+const JWTContextKey contextKey = "jwt_token"
 
 type JWTValidationMiddlewareDependencies struct {
 	AppCtx *globals.ApplicationContext
@@ -157,6 +163,12 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 
 	nextStage:
 		rw.Header().Del("WWW-Authenticate")
+		// Store the JWT in the request context for downstream use (e.g., tool policies)
+		if authHeader := req.Header.Get("Authorization"); authHeader != "" {
+			tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
+			ctx := context.WithValue(req.Context(), JWTContextKey, tokenString)
+			req = req.WithContext(ctx)
+		}
 		next.ServeHTTP(rw, req)
 	})
 }

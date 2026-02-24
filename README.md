@@ -161,10 +161,41 @@ When running in HTTP mode, Twitter MCP supports:
 
 - **JWT validation** with JWKS endpoint caching
 - **CEL expressions** for fine-grained access control
+- **Tool policies** based on JWT claims (groups, scopes, etc.)
 - **OAuth 2.0 metadata endpoints** (RFC 9728 compliant)
 - **Access logging** with header redaction
 
 This makes it suitable for production deployments behind an identity provider like Keycloak, Auth0, or similar.
+
+### Tool Policies
+
+You can restrict which tools are available based on JWT claims. Policies are evaluated in order, and the first matching policy wins:
+
+```yaml
+policies:
+  tools:
+    # Admins can do everything
+    - expression: 'has(payload.groups) && payload.groups.exists(g, g == "admins")'
+      allowed_tools: ["*"]
+    
+    # Writers can post and read
+    - expression: 'has(payload.groups) && payload.groups.exists(g, g == "writers")'
+      allowed_tools:
+        - "post_tweet"
+        - "delete_tweet"
+        - "get_*"  # Wildcard support
+    
+    # Readers can only read
+    - expression: 'has(payload.scope) && payload.scope.contains("twitter:read")'
+      allowed_tools:
+        - "get_timeline"
+        - "get_mentions"
+        - "search_*"
+```
+
+The `allowed_tools` field supports:
+- Exact matches: `"post_tweet"`
+- Wildcards: `"*"` (all tools) or `"get_*"` (prefix match)
 
 ## Location codes for trends
 

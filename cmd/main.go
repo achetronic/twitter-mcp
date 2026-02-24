@@ -43,6 +43,19 @@ func main() {
 		appCtx.Logger.Info("failed starting JWT validation middleware", "error", err.Error())
 	}
 
+	toolPolicyMw, err := middlewares.NewToolPolicyMiddleware(middlewares.ToolPolicyMiddlewareDependencies{
+		AppCtx: appCtx,
+	})
+	if err != nil {
+		appCtx.Logger.Info("failed starting tool policy middleware", "error", err.Error())
+	}
+
+	// Collect tool middlewares
+	var toolMiddlewares []middlewares.ToolMiddleware
+	if toolPolicyMw != nil && len(appCtx.Config.Policies.Tools) > 0 {
+		toolMiddlewares = append(toolMiddlewares, toolPolicyMw)
+	}
+
 	// 3. Create a new MCP server
 	mcpServer := server.NewMCPServer(
 		appCtx.Config.Server.Name,
@@ -59,7 +72,7 @@ func main() {
 	tm := tools.NewToolsManager(tools.ToolsManagerDependencies{
 		AppCtx:        appCtx,
 		McpServer:     mcpServer,
-		Middlewares:   []middlewares.ToolMiddleware{},
+		Middlewares:   toolMiddlewares,
 		TwitterClient: twitterClient,
 	})
 	tm.AddTools()
