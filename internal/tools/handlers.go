@@ -121,7 +121,10 @@ func (tm *ToolsManager) HandleToolGetTrends(ctx context.Context, request mcp.Cal
 // HandleToolSearchTopics handles the search_topics tool
 func (tm *ToolsManager) HandleToolSearchTopics(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
 	args := getArgs(request)
-	maxResults := getInt(args, "max_results", 5)
+	maxResults := getInt(args, "max_results", 10)
+	if maxResults < 10 {
+		maxResults = 10
+	}
 	if maxResults > 20 {
 		maxResults = 20
 	}
