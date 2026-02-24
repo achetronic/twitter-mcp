@@ -336,7 +336,7 @@ func (c *Client) GetMentions(userID string, maxResults int) (*TweetsResponse, er
 	return &response, nil
 }
 
-// SearchTweets searches for tweets (v2 API)
+// SearchTweets searches for tweets from the last 24 hours (v2 API)
 func (c *Client) SearchTweets(query string, maxResults int) (*TweetsResponse, error) {
 	if maxResults <= 0 {
 		maxResults = 10
@@ -345,8 +345,11 @@ func (c *Client) SearchTweets(query string, maxResults int) (*TweetsResponse, er
 		maxResults = 100
 	}
 
+	// Only search tweets from the last 24 hours
+	startTime := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
+
 	encodedQuery := url.QueryEscape(query)
-	endpoint := fmt.Sprintf("/tweets/search/recent?query=%s&max_results=%d&tweet.fields=created_at,author_id,public_metrics&expansions=author_id&sort_order=recency", encodedQuery, maxResults)
+	endpoint := fmt.Sprintf("/tweets/search/recent?query=%s&max_results=%d&tweet.fields=created_at,author_id,public_metrics&expansions=author_id&sort_order=recency&start_time=%s", encodedQuery, maxResults, startTime)
 
 	body, err := c.doRequestV2("GET", endpoint, nil)
 	if err != nil {
