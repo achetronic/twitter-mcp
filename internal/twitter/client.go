@@ -58,6 +58,42 @@ func NewClient(apiKey, apiKeySecret, accessToken, accessTokenSecret, bearerToken
 	}
 }
 
+// doRequestV2OAuth1 performs an HTTP request to the Twitter v2 API using OAuth 1.0a user context
+func (c *Client) doRequestV2OAuth1(method, endpoint string, body interface{}) ([]byte, error) {
+	var reqBody io.Reader
+	if body != nil {
+		jsonBody, err := json.Marshal(body)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal request body: %w", err)
+		}
+		reqBody = bytes.NewBuffer(jsonBody)
+	}
+
+	req, err := http.NewRequest(method, baseURLv2+endpoint, reqBody)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create request: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := c.oauth1Client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read response body: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("API error (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return respBody, nil
+}
+
 // doRequestV2 performs an HTTP request to the Twitter v2 API using Bearer token
 func (c *Client) doRequestV2(method, endpoint string, body interface{}) ([]byte, error) {
 	var reqBody io.Reader
@@ -221,7 +257,7 @@ type TrendsResponse []struct {
 	} `json:"locations"`
 }
 
-// PostTweet posts a new tweet (v2 API)
+// PostTweet posts a new tweet (v2 API with OAuth 1.0a user context)
 func (c *Client) PostTweet(text string, replyToID string) (*Tweet, error) {
 	payload := map[string]interface{}{
 		"text": text,
@@ -233,7 +269,7 @@ func (c *Client) PostTweet(text string, replyToID string) (*Tweet, error) {
 		}
 	}
 
-	body, err := c.doRequestV2("POST", "/tweets", payload)
+	body, err := c.doRequestV2OAuth1("POST", "/tweets", payload)
 	if err != nil {
 		return nil, err
 	}
@@ -246,13 +282,13 @@ func (c *Client) PostTweet(text string, replyToID string) (*Tweet, error) {
 	return response.Data, nil
 }
 
-// DeleteTweet deletes a tweet (v2 API)
+// DeleteTweet deletes a tweet (v2 API with OAuth 1.0a user context)
 func (c *Client) DeleteTweet(tweetID string) error {
-	_, err := c.doRequestV2("DELETE", "/tweets/"+tweetID, nil)
+	_, err := c.doRequestV2OAuth1("DELETE", "/tweets/"+tweetID, nil)
 	return err
 }
 
-// GetTimeline gets the authenticated user's home timeline (v2 API)
+// GetTimeline gets the authenticated user's home timeline (v2 API with OAuth 1.0a user context)
 func (c *Client) GetTimeline(userID string, maxResults int) (*TweetsResponse, error) {
 	if maxResults <= 0 {
 		maxResults = 10
@@ -263,7 +299,7 @@ func (c *Client) GetTimeline(userID string, maxResults int) (*TweetsResponse, er
 
 	endpoint := fmt.Sprintf("/users/%s/timelines/reverse_chronological?max_results=%d&tweet.fields=created_at,author_id&expansions=author_id", userID, maxResults)
 
-	body, err := c.doRequestV2("GET", endpoint, nil)
+	body, err := c.doRequestV2OAuth1("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -276,7 +312,7 @@ func (c *Client) GetTimeline(userID string, maxResults int) (*TweetsResponse, er
 	return &response, nil
 }
 
-// GetMentions gets mentions of the authenticated user (v2 API)
+// GetMentions gets mentions of the authenticated user (v2 API with OAuth 1.0a user context)
 func (c *Client) GetMentions(userID string, maxResults int) (*TweetsResponse, error) {
 	if maxResults <= 0 {
 		maxResults = 10
@@ -287,7 +323,7 @@ func (c *Client) GetMentions(userID string, maxResults int) (*TweetsResponse, er
 
 	endpoint := fmt.Sprintf("/users/%s/mentions?max_results=%d&tweet.fields=created_at,author_id&expansions=author_id", userID, maxResults)
 
-	body, err := c.doRequestV2("GET", endpoint, nil)
+	body, err := c.doRequestV2OAuth1("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -476,9 +512,9 @@ func sortTopicsByHeat(topics []TopicHeat) {
 	}
 }
 
-// GetMe gets the authenticated user's info (v2 API)
+// GetMe gets the authenticated user's info (v2 API with OAuth 1.0a user context)
 func (c *Client) GetMe() (*User, error) {
-	body, err := c.doRequestV2("GET", "/users/me", nil)
+	body, err := c.doRequestV2OAuth1("GET", "/users/me", nil)
 	if err != nil {
 		return nil, err
 	}
@@ -493,51 +529,51 @@ func (c *Client) GetMe() (*User, error) {
 	return &response.Data, nil
 }
 
-// LikeTweet likes a tweet (v2 API)
+// LikeTweet likes a tweet (v2 API with OAuth 1.0a user context)
 func (c *Client) LikeTweet(userID, tweetID string) error {
 	payload := map[string]string{
 		"tweet_id": tweetID,
 	}
 
-	_, err := c.doRequestV2("POST", "/users/"+userID+"/likes", payload)
+	_, err := c.doRequestV2OAuth1("POST", "/users/"+userID+"/likes", payload)
 	return err
 }
 
-// UnlikeTweet removes a like from a tweet (v2 API)
+// UnlikeTweet removes a like from a tweet (v2 API with OAuth 1.0a user context)
 func (c *Client) UnlikeTweet(userID, tweetID string) error {
-	_, err := c.doRequestV2("DELETE", "/users/"+userID+"/likes/"+tweetID, nil)
+	_, err := c.doRequestV2OAuth1("DELETE", "/users/"+userID+"/likes/"+tweetID, nil)
 	return err
 }
 
-// Retweet retweets a tweet (v2 API)
+// Retweet retweets a tweet (v2 API with OAuth 1.0a user context)
 func (c *Client) Retweet(userID, tweetID string) error {
 	payload := map[string]string{
 		"tweet_id": tweetID,
 	}
 
-	_, err := c.doRequestV2("POST", "/users/"+userID+"/retweets", payload)
+	_, err := c.doRequestV2OAuth1("POST", "/users/"+userID+"/retweets", payload)
 	return err
 }
 
-// UndoRetweet removes a retweet (v2 API)
+// UndoRetweet removes a retweet (v2 API with OAuth 1.0a user context)
 func (c *Client) UndoRetweet(userID, tweetID string) error {
-	_, err := c.doRequestV2("DELETE", "/users/"+userID+"/retweets/"+tweetID, nil)
+	_, err := c.doRequestV2OAuth1("DELETE", "/users/"+userID+"/retweets/"+tweetID, nil)
 	return err
 }
 
-// FollowUser follows a user (v2 API)
+// FollowUser follows a user (v2 API with OAuth 1.0a user context)
 func (c *Client) FollowUser(sourceUserID, targetUserID string) error {
 	payload := map[string]string{
 		"target_user_id": targetUserID,
 	}
 
-	_, err := c.doRequestV2("POST", "/users/"+sourceUserID+"/following", payload)
+	_, err := c.doRequestV2OAuth1("POST", "/users/"+sourceUserID+"/following", payload)
 	return err
 }
 
-// UnfollowUser unfollows a user (v2 API)
+// UnfollowUser unfollows a user (v2 API with OAuth 1.0a user context)
 func (c *Client) UnfollowUser(sourceUserID, targetUserID string) error {
-	_, err := c.doRequestV2("DELETE", "/users/"+sourceUserID+"/following/"+targetUserID, nil)
+	_, err := c.doRequestV2OAuth1("DELETE", "/users/"+sourceUserID+"/following/"+targetUserID, nil)
 	return err
 }
 
@@ -626,23 +662,23 @@ func (c *Client) GetUserTweets(userID string, maxResults int) (*TweetsResponse, 
 	return &response, nil
 }
 
-// BookmarkTweet bookmarks a tweet (v2 API)
+// BookmarkTweet bookmarks a tweet (v2 API with OAuth 1.0a user context)
 func (c *Client) BookmarkTweet(userID, tweetID string) error {
 	payload := map[string]string{
 		"tweet_id": tweetID,
 	}
 
-	_, err := c.doRequestV2("POST", "/users/"+userID+"/bookmarks", payload)
+	_, err := c.doRequestV2OAuth1("POST", "/users/"+userID+"/bookmarks", payload)
 	return err
 }
 
-// RemoveBookmark removes a bookmark from a tweet (v2 API)
+// RemoveBookmark removes a bookmark from a tweet (v2 API with OAuth 1.0a user context)
 func (c *Client) RemoveBookmark(userID, tweetID string) error {
-	_, err := c.doRequestV2("DELETE", "/users/"+userID+"/bookmarks/"+tweetID, nil)
+	_, err := c.doRequestV2OAuth1("DELETE", "/users/"+userID+"/bookmarks/"+tweetID, nil)
 	return err
 }
 
-// GetBookmarks gets the authenticated user's bookmarks (v2 API)
+// GetBookmarks gets the authenticated user's bookmarks (v2 API with OAuth 1.0a user context)
 func (c *Client) GetBookmarks(userID string, maxResults int) (*TweetsResponse, error) {
 	if maxResults <= 0 {
 		maxResults = 10
@@ -653,7 +689,7 @@ func (c *Client) GetBookmarks(userID string, maxResults int) (*TweetsResponse, e
 
 	endpoint := fmt.Sprintf("/users/%s/bookmarks?max_results=%d&tweet.fields=created_at,author_id,public_metrics&expansions=author_id", userID, maxResults)
 
-	body, err := c.doRequestV2("GET", endpoint, nil)
+	body, err := c.doRequestV2OAuth1("GET", endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -683,50 +719,6 @@ func (c *Client) PostThread(tweets []string) ([]*Tweet, error) {
 	return postedTweets, nil
 }
 
-// SendDM sends a direct message to a user (v2 API)
-func (c *Client) SendDM(participantID, text string) error {
-	payload := map[string]interface{}{
-		"text": text,
-	}
-
-	_, err := c.doRequestV2("POST", "/dm_conversations/with/"+participantID+"/messages", payload)
-	return err
-}
-
-// DMConversation represents a DM conversation
-type DMConversation struct {
-	ID               string `json:"id"`
-	Text             string `json:"text"`
-	SenderID         string `json:"sender_id"`
-	CreatedAt        string `json:"created_at,omitempty"`
-}
-
-// GetDMEvents gets recent DM events (v2 API)
-func (c *Client) GetDMEvents(maxResults int) ([]DMConversation, error) {
-	if maxResults <= 0 {
-		maxResults = 10
-	}
-	if maxResults > 100 {
-		maxResults = 100
-	}
-
-	endpoint := fmt.Sprintf("/dm_events?max_results=%d&dm_event.fields=text,sender_id,created_at", maxResults)
-
-	body, err := c.doRequestV2("GET", endpoint, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var response struct {
-		Data []DMConversation `json:"data"`
-	}
-	if err := json.Unmarshal(body, &response); err != nil {
-		return nil, fmt.Errorf("failed to parse DM events: %w", err)
-	}
-
-	return response.Data, nil
-}
-
 // MediaUploadResponse represents the response from media upload
 type MediaUploadResponse struct {
 	MediaID       int64  `json:"media_id"`
@@ -754,7 +746,7 @@ func (c *Client) UploadMedia(imageData []byte) (*MediaUploadResponse, error) {
 	return &response, nil
 }
 
-// PostTweetWithMedia posts a tweet with media attachments (v2 API)
+// PostTweetWithMedia posts a tweet with media attachments (v2 API with OAuth 1.0a user context)
 func (c *Client) PostTweetWithMedia(text string, mediaIDs []string) (*Tweet, error) {
 	payload := map[string]interface{}{
 		"text": text,
@@ -766,7 +758,7 @@ func (c *Client) PostTweetWithMedia(text string, mediaIDs []string) (*Tweet, err
 		}
 	}
 
-	body, err := c.doRequestV2("POST", "/tweets", payload)
+	body, err := c.doRequestV2OAuth1("POST", "/tweets", payload)
 	if err != nil {
 		return nil, err
 	}

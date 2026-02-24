@@ -402,35 +402,4 @@ func (tm *ToolsManager) HandleToolPostThread(ctx context.Context, request mcp.Ca
 	return mcp.NewToolResultText(string(result)), nil
 }
 
-// HandleToolSendDM handles the send_dm tool
-func (tm *ToolsManager) HandleToolSendDM(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := getArgs(request)
-	username := getString(args, "username", "")
-	text := getString(args, "text", "")
 
-	user, err := tm.dependencies.TwitterClient.GetUserByUsername(username)
-	if err != nil {
-		return mcp.NewToolResultError("failed to get user: " + err.Error()), nil
-	}
-
-	err = tm.dependencies.TwitterClient.SendDM(user.ID, text)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	return mcp.NewToolResultText(`{"success": true, "message": "DM sent"}`), nil
-}
-
-// HandleToolGetDMs handles the get_dms tool
-func (tm *ToolsManager) HandleToolGetDMs(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	args := getArgs(request)
-	maxResults := getInt(args, "max_results", 10)
-
-	dms, err := tm.dependencies.TwitterClient.GetDMEvents(maxResults)
-	if err != nil {
-		return mcp.NewToolResultError(err.Error()), nil
-	}
-
-	result, _ := json.Marshal(dms)
-	return mcp.NewToolResultText(string(result)), nil
-}

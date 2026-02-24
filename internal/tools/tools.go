@@ -268,26 +268,5 @@ func (tm *ToolsManager) AddTools() {
 	)
 	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolPostThread))
 
-	// send_dm - Send a direct message
-	tool = mcp.NewTool("send_dm",
-		mcp.WithDescription("Send a direct message to a user"),
-		mcp.WithString("username",
-			mcp.Required(),
-			mcp.Description("The username of the recipient (without @)"),
-		),
-		mcp.WithString("text",
-			mcp.Required(),
-			mcp.Description("The message text"),
-		),
-	)
-	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolSendDM))
 
-	// get_dms - Get recent direct messages
-	tool = mcp.NewTool("get_dms",
-		mcp.WithDescription("Get recent direct messages"),
-		mcp.WithNumber("max_results",
-			mcp.Description("Maximum number of DMs to return (default: 10, max: 100)"),
-		),
-	)
-	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetDMs))
 }
