@@ -8,7 +8,7 @@
 
 ---
 
-## What can it do?
+## 🎯 What can it do?
 
 This MCP gives your AI assistant the ability to:
 
@@ -19,7 +19,7 @@ This MCP gives your AI assistant the ability to:
 
 The heat score feature is particularly interesting: give it a list of topics and it will tell you which ones are getting more traction right now, based on tweet volume and engagement metrics.
 
-## Getting started
+## 🚀 Getting started
 
 ### 1. Get your Twitter API credentials
 
@@ -97,7 +97,7 @@ make build
 make run
 ```
 
-## Available tools
+## 🛠️ Available tools
 
 ### Reading
 
@@ -127,7 +127,7 @@ make run
 | `search_topics` | Search multiple topics at once |
 | `get_topics_heat` | Compare topic popularity with heat scores |
 
-## The heat score explained
+## 🔥 The heat score explained
 
 When you call `get_topics_heat` with a list of topics, it returns something like:
 
@@ -155,7 +155,7 @@ When you call `get_topics_heat` with a list of topics, it returns something like
 
 The score (0-100) combines tweet volume and engagement. Results come sorted from hottest to coldest, so you can quickly see what's getting attention.
 
-## Authentication & Security
+## 🔐 Authentication & Security
 
 When running in HTTP mode, Twitter MCP supports:
 
@@ -197,7 +197,7 @@ The `allowed_tools` field supports:
 - Exact matches: `"post_tweet"`
 - Wildcards: `"*"` (all tools) or `"get_*"` (prefix match)
 
-## Location codes for trends
+## 🌍 Location codes for trends
 
 The `get_trends` tool uses WOEIDs (Where On Earth IDs):
 
@@ -211,6 +211,6 @@ The `get_trends` tool uses WOEIDs (Where On Earth IDs):
 | Barcelona | 753692 |
 | New York | 2459115 |
 
-## License
+## 📄 License
 
 Apache 2.0
