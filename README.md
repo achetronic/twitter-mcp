@@ -1,6 +1,12 @@
-# Twitter MCP
+<p align="center">
+  <img src="docs/images/header.svg" alt="Twitter MCP" width="800"/>
+</p>
 
-A Model Context Protocol server that lets AI assistants interact with Twitter/X. Built in Go, designed to be simple and useful.
+<p align="center">
+  <em>A Model Context Protocol server that lets AI assistants interact with Twitter/X.<br/>Built in Go, designed to be simple and useful.</em>
+</p>
+
+---
 
 ## What can it do?
 
