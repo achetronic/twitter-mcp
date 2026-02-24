@@ -346,7 +346,7 @@ func (c *Client) SearchTweets(query string, maxResults int) (*TweetsResponse, er
 	}
 
 	encodedQuery := url.QueryEscape(query)
-	endpoint := fmt.Sprintf("/tweets/search/recent?query=%s&max_results=%d&tweet.fields=created_at,author_id,public_metrics&expansions=author_id", encodedQuery, maxResults)
+	endpoint := fmt.Sprintf("/tweets/search/recent?query=%s&max_results=%d&tweet.fields=created_at,author_id,public_metrics&expansions=author_id&sort_order=recency", encodedQuery, maxResults)
 
 	body, err := c.doRequestV2("GET", endpoint, nil)
 	if err != nil {
