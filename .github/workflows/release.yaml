@@ -1,6 +1,8 @@
 name: Release
 
 on:
+  release:
+    types: [published]
   workflow_dispatch:
     inputs:
       version:
@@ -36,17 +38,24 @@ jobs:
             goarch: amd64
             ext: .exe
     steps:
-      - name: Checkout tag
-        if: ${{ !inputs.use_main }}
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.version }}
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "REF=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.use_main }}" = "true" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "REF=main" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "REF=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
       
-      - name: Checkout main
-        if: ${{ inputs.use_main }}
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ steps.version.outputs.REF }}
       
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -60,7 +69,7 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
         run: |
           mkdir -p bin
-          go build -ldflags="-w -s -X main.Version=${{ inputs.version }}" \
+          go build -ldflags="-w -s -X main.Version=${{ steps.version.outputs.VERSION }}" \
             -o bin/twitter-mcp-${{ matrix.goos }}-${{ matrix.goarch }}${{ matrix.ext }} \
             ./cmd/main.go
       
@@ -77,17 +86,24 @@ jobs:
       contents: read
       packages: write
     steps:
-      - name: Checkout tag
-        if: ${{ !inputs.use_main }}
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ inputs.version }}
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+            echo "REF=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ "${{ inputs.use_main }}" = "true" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "REF=main" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+            echo "REF=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
       
-      - name: Checkout main
-        if: ${{ inputs.use_main }}
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ steps.version.outputs.REF }}
       
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -109,10 +125,10 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ inputs.version }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.version.outputs.VERSION }}
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           labels: |
-            org.opencontainers.image.version=${{ inputs.version }}
+            org.opencontainers.image.version=${{ steps.version.outputs.VERSION }}
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -124,6 +140,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "VERSION=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
@@ -142,6 +167,6 @@ jobs:
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ inputs.version }}
+          tag_name: ${{ steps.version.outputs.VERSION }}
           files: release/*
           fail_on_unmatched_files: true
