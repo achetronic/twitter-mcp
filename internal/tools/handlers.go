@@ -23,8 +23,9 @@ import (
 
 // HandleToolPostTweet handles the post_tweet tool
 func (tm *ToolsManager) HandleToolPostTweet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	text, _ := request.Params.Arguments["text"].(string)
-	replyToID, _ := request.Params.Arguments["reply_to_id"].(string)
+	args := getArgs(request)
+	text := getString(args, "text", "")
+	replyToID := getString(args, "reply_to_id", "")
 
 	tweet, err := tm.dependencies.TwitterClient.PostTweet(text, replyToID)
 	if err != nil {
@@ -37,7 +38,8 @@ func (tm *ToolsManager) HandleToolPostTweet(ctx context.Context, request mcp.Cal
 
 // HandleToolDeleteTweet handles the delete_tweet tool
 func (tm *ToolsManager) HandleToolDeleteTweet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tweetID, _ := request.Params.Arguments["tweet_id"].(string)
+	args := getArgs(request)
+	tweetID := getString(args, "tweet_id", "")
 
 	err := tm.dependencies.TwitterClient.DeleteTweet(tweetID)
 	if err != nil {
@@ -49,10 +51,8 @@ func (tm *ToolsManager) HandleToolDeleteTweet(ctx context.Context, request mcp.C
 
 // HandleToolGetTimeline handles the get_timeline tool
 func (tm *ToolsManager) HandleToolGetTimeline(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	maxResults := 10
-	if mr, ok := request.Params.Arguments["max_results"].(float64); ok {
-		maxResults = int(mr)
-	}
+	args := getArgs(request)
+	maxResults := getInt(args, "max_results", 10)
 
 	// First get the authenticated user's ID
 	me, err := tm.dependencies.TwitterClient.GetMe()
@@ -71,10 +71,8 @@ func (tm *ToolsManager) HandleToolGetTimeline(ctx context.Context, request mcp.C
 
 // HandleToolGetMentions handles the get_mentions tool
 func (tm *ToolsManager) HandleToolGetMentions(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	maxResults := 10
-	if mr, ok := request.Params.Arguments["max_results"].(float64); ok {
-		maxResults = int(mr)
-	}
+	args := getArgs(request)
+	maxResults := getInt(args, "max_results", 10)
 
 	// First get the authenticated user's ID
 	me, err := tm.dependencies.TwitterClient.GetMe()
@@ -93,11 +91,9 @@ func (tm *ToolsManager) HandleToolGetMentions(ctx context.Context, request mcp.C
 
 // HandleToolSearchTweets handles the search_tweets tool
 func (tm *ToolsManager) HandleToolSearchTweets(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	query, _ := request.Params.Arguments["query"].(string)
-	maxResults := 10
-	if mr, ok := request.Params.Arguments["max_results"].(float64); ok {
-		maxResults = int(mr)
-	}
+	args := getArgs(request)
+	query := getString(args, "query", "")
+	maxResults := getInt(args, "max_results", 10)
 
 	tweets, err := tm.dependencies.TwitterClient.SearchTweets(query, maxResults)
 	if err != nil {
@@ -110,10 +106,8 @@ func (tm *ToolsManager) HandleToolSearchTweets(ctx context.Context, request mcp.
 
 // HandleToolGetTrends handles the get_trends tool
 func (tm *ToolsManager) HandleToolGetTrends(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	woeid := 1 // Worldwide by default
-	if w, ok := request.Params.Arguments["woeid"].(float64); ok {
-		woeid = int(w)
-	}
+	args := getArgs(request)
+	woeid := getInt(args, "woeid", 1)
 
 	trends, err := tm.dependencies.TwitterClient.GetTrends(woeid)
 	if err != nil {
@@ -126,23 +120,14 @@ func (tm *ToolsManager) HandleToolGetTrends(ctx context.Context, request mcp.Cal
 
 // HandleToolSearchTopics handles the search_topics tool
 func (tm *ToolsManager) HandleToolSearchTopics(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	maxResults := 5
-	if mr, ok := request.Params.Arguments["max_results"].(float64); ok {
-		maxResults = int(mr)
-		if maxResults > 20 {
-			maxResults = 20
-		}
+	args := getArgs(request)
+	maxResults := getInt(args, "max_results", 5)
+	if maxResults > 20 {
+		maxResults = 20
 	}
 
 	// Extract topics from the request
-	var topics []string
-	if topicsRaw, ok := request.Params.Arguments["topics"].([]interface{}); ok {
-		for _, t := range topicsRaw {
-			if topic, ok := t.(string); ok {
-				topics = append(topics, topic)
-			}
-		}
-	}
+	topics := getStringSlice(args, "topics")
 
 	if len(topics) == 0 {
 		return mcp.NewToolResultError("no topics provided"), nil
@@ -159,23 +144,14 @@ func (tm *ToolsManager) HandleToolSearchTopics(ctx context.Context, request mcp.
 
 // HandleToolGetTopicsHeat handles the get_topics_heat tool
 func (tm *ToolsManager) HandleToolGetTopicsHeat(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	sampleSize := 20
-	if ss, ok := request.Params.Arguments["sample_size"].(float64); ok {
-		sampleSize = int(ss)
-		if sampleSize > 100 {
-			sampleSize = 100
-		}
+	args := getArgs(request)
+	sampleSize := getInt(args, "sample_size", 20)
+	if sampleSize > 100 {
+		sampleSize = 100
 	}
 
 	// Extract topics from the request
-	var topics []string
-	if topicsRaw, ok := request.Params.Arguments["topics"].([]interface{}); ok {
-		for _, t := range topicsRaw {
-			if topic, ok := t.(string); ok {
-				topics = append(topics, topic)
-			}
-		}
-	}
+	topics := getStringSlice(args, "topics")
 
 	if len(topics) == 0 {
 		return mcp.NewToolResultError("no topics provided"), nil
@@ -203,7 +179,8 @@ func (tm *ToolsManager) HandleToolGetMe(ctx context.Context, request mcp.CallToo
 
 // HandleToolLikeTweet handles the like_tweet tool
 func (tm *ToolsManager) HandleToolLikeTweet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tweetID, _ := request.Params.Arguments["tweet_id"].(string)
+	args := getArgs(request)
+	tweetID := getString(args, "tweet_id", "")
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -220,7 +197,8 @@ func (tm *ToolsManager) HandleToolLikeTweet(ctx context.Context, request mcp.Cal
 
 // HandleToolUnlikeTweet handles the unlike_tweet tool
 func (tm *ToolsManager) HandleToolUnlikeTweet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tweetID, _ := request.Params.Arguments["tweet_id"].(string)
+	args := getArgs(request)
+	tweetID := getString(args, "tweet_id", "")
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -237,7 +215,8 @@ func (tm *ToolsManager) HandleToolUnlikeTweet(ctx context.Context, request mcp.C
 
 // HandleToolRetweet handles the retweet tool
 func (tm *ToolsManager) HandleToolRetweet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tweetID, _ := request.Params.Arguments["tweet_id"].(string)
+	args := getArgs(request)
+	tweetID := getString(args, "tweet_id", "")
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -254,7 +233,8 @@ func (tm *ToolsManager) HandleToolRetweet(ctx context.Context, request mcp.CallT
 
 // HandleToolUndoRetweet handles the undo_retweet tool
 func (tm *ToolsManager) HandleToolUndoRetweet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tweetID, _ := request.Params.Arguments["tweet_id"].(string)
+	args := getArgs(request)
+	tweetID := getString(args, "tweet_id", "")
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -271,7 +251,8 @@ func (tm *ToolsManager) HandleToolUndoRetweet(ctx context.Context, request mcp.C
 
 // HandleToolFollowUser handles the follow_user tool
 func (tm *ToolsManager) HandleToolFollowUser(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	username, _ := request.Params.Arguments["username"].(string)
+	args := getArgs(request)
+	username := getString(args, "username", "")
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -293,7 +274,8 @@ func (tm *ToolsManager) HandleToolFollowUser(ctx context.Context, request mcp.Ca
 
 // HandleToolUnfollowUser handles the unfollow_user tool
 func (tm *ToolsManager) HandleToolUnfollowUser(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	username, _ := request.Params.Arguments["username"].(string)
+	args := getArgs(request)
+	username := getString(args, "username", "")
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -315,7 +297,8 @@ func (tm *ToolsManager) HandleToolUnfollowUser(ctx context.Context, request mcp.
 
 // HandleToolGetUserProfile handles the get_user_profile tool
 func (tm *ToolsManager) HandleToolGetUserProfile(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	username, _ := request.Params.Arguments["username"].(string)
+	args := getArgs(request)
+	username := getString(args, "username", "")
 
 	profile, err := tm.dependencies.TwitterClient.GetUserProfile(username)
 	if err != nil {
@@ -328,11 +311,9 @@ func (tm *ToolsManager) HandleToolGetUserProfile(ctx context.Context, request mc
 
 // HandleToolGetUserTweets handles the get_user_tweets tool
 func (tm *ToolsManager) HandleToolGetUserTweets(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	username, _ := request.Params.Arguments["username"].(string)
-	maxResults := 10
-	if mr, ok := request.Params.Arguments["max_results"].(float64); ok {
-		maxResults = int(mr)
-	}
+	args := getArgs(request)
+	username := getString(args, "username", "")
+	maxResults := getInt(args, "max_results", 10)
 
 	user, err := tm.dependencies.TwitterClient.GetUserByUsername(username)
 	if err != nil {
@@ -350,7 +331,8 @@ func (tm *ToolsManager) HandleToolGetUserTweets(ctx context.Context, request mcp
 
 // HandleToolBookmarkTweet handles the bookmark_tweet tool
 func (tm *ToolsManager) HandleToolBookmarkTweet(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tweetID, _ := request.Params.Arguments["tweet_id"].(string)
+	args := getArgs(request)
+	tweetID := getString(args, "tweet_id", "")
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -367,7 +349,8 @@ func (tm *ToolsManager) HandleToolBookmarkTweet(ctx context.Context, request mcp
 
 // HandleToolRemoveBookmark handles the remove_bookmark tool
 func (tm *ToolsManager) HandleToolRemoveBookmark(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	tweetID, _ := request.Params.Arguments["tweet_id"].(string)
+	args := getArgs(request)
+	tweetID := getString(args, "tweet_id", "")
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -384,10 +367,8 @@ func (tm *ToolsManager) HandleToolRemoveBookmark(ctx context.Context, request mc
 
 // HandleToolGetBookmarks handles the get_bookmarks tool
 func (tm *ToolsManager) HandleToolGetBookmarks(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	maxResults := 10
-	if mr, ok := request.Params.Arguments["max_results"].(float64); ok {
-		maxResults = int(mr)
-	}
+	args := getArgs(request)
+	maxResults := getInt(args, "max_results", 10)
 
 	me, err := tm.dependencies.TwitterClient.GetMe()
 	if err != nil {
@@ -405,14 +386,8 @@ func (tm *ToolsManager) HandleToolGetBookmarks(ctx context.Context, request mcp.
 
 // HandleToolPostThread handles the post_thread tool
 func (tm *ToolsManager) HandleToolPostThread(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	var tweets []string
-	if tweetsRaw, ok := request.Params.Arguments["tweets"].([]interface{}); ok {
-		for _, t := range tweetsRaw {
-			if tweet, ok := t.(string); ok {
-				tweets = append(tweets, tweet)
-			}
-		}
-	}
+	args := getArgs(request)
+	tweets := getStringSlice(args, "tweets")
 
 	if len(tweets) == 0 {
 		return mcp.NewToolResultError("no tweets provided for thread"), nil
@@ -429,8 +404,9 @@ func (tm *ToolsManager) HandleToolPostThread(ctx context.Context, request mcp.Ca
 
 // HandleToolSendDM handles the send_dm tool
 func (tm *ToolsManager) HandleToolSendDM(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	username, _ := request.Params.Arguments["username"].(string)
-	text, _ := request.Params.Arguments["text"].(string)
+	args := getArgs(request)
+	username := getString(args, "username", "")
+	text := getString(args, "text", "")
 
 	user, err := tm.dependencies.TwitterClient.GetUserByUsername(username)
 	if err != nil {
@@ -447,10 +423,8 @@ func (tm *ToolsManager) HandleToolSendDM(ctx context.Context, request mcp.CallTo
 
 // HandleToolGetDMs handles the get_dms tool
 func (tm *ToolsManager) HandleToolGetDMs(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-	maxResults := 10
-	if mr, ok := request.Params.Arguments["max_results"].(float64); ok {
-		maxResults = int(mr)
-	}
+	args := getArgs(request)
+	maxResults := getInt(args, "max_results", 10)
 
 	dms, err := tm.dependencies.TwitterClient.GetDMEvents(maxResults)
 	if err != nil {
