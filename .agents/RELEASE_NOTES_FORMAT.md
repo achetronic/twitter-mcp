@@ -1,6 +1,6 @@
 # Release Notes Format
 
-Use this format when writing release notes. Keep it friendly, concise, and useful.
+Use this format when writing release notes. Keep it simple, short, and easy to read. Write like you're telling a friend what changed.
 
 ---
 
@@ -74,14 +74,16 @@ SHA256 checksums are provided for all binaries.
 
 ## Guidelines
 
-1. **Be human** — Write like you're explaining to a friend, not documenting for a compliance audit.
+1. **Plain language** — No jargon. If your grandma wouldn't get it, rewrite it. Always in English.
 
-2. **Group by impact** — Users care about what they can do now, not which file you changed.
+2. **Be human** — Write like you're explaining to a friend, not documenting for a compliance audit.
 
-3. **Skip the noise** — Internal refactors, dependency bumps, and CI tweaks don't need to be in release notes unless they affect users.
+3. **Group by impact** — Users care about what they can do now, not which file you changed.
 
-4. **One emoji per header** — Keep it minimal. Just the section headers, not every line.
+4. **Skip the noise** — Internal refactors, dependency bumps, and CI tweaks don't need to be in release notes unless they affect users.
 
-5. **Keep it scannable** — Bold the theme/area, then explain. People skim.
+5. **One emoji per header** — Keep it minimal. Just the section headers, not every line.
 
-6. **Breaking changes up front** — If something breaks, say it clearly and early.
+6. **Keep it scannable** — Bold the theme/area, then explain. People skim.
+
+7. **Breaking changes up front** — If something breaks, say it clearly and early.
