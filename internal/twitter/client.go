@@ -16,6 +16,7 @@ package twitter
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -522,4 +523,258 @@ func (c *Client) Retweet(userID, tweetID string) error {
 func (c *Client) UndoRetweet(userID, tweetID string) error {
 	_, err := c.doRequestV2("DELETE", "/users/"+userID+"/retweets/"+tweetID, nil)
 	return err
+}
+
+// FollowUser follows a user (v2 API)
+func (c *Client) FollowUser(sourceUserID, targetUserID string) error {
+	payload := map[string]string{
+		"target_user_id": targetUserID,
+	}
+
+	_, err := c.doRequestV2("POST", "/users/"+sourceUserID+"/following", payload)
+	return err
+}
+
+// UnfollowUser unfollows a user (v2 API)
+func (c *Client) UnfollowUser(sourceUserID, targetUserID string) error {
+	_, err := c.doRequestV2("DELETE", "/users/"+sourceUserID+"/following/"+targetUserID, nil)
+	return err
+}
+
+// GetUserByUsername gets a user's profile by username (v2 API)
+func (c *Client) GetUserByUsername(username string) (*User, error) {
+	endpoint := fmt.Sprintf("/users/by/username/%s?user.fields=description,public_metrics,created_at,profile_image_url", username)
+
+	body, err := c.doRequestV2("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data UserProfile `json:"data"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse user response: %w", err)
+	}
+
+	return &User{
+		ID:       response.Data.ID,
+		Name:     response.Data.Name,
+		Username: response.Data.Username,
+	}, nil
+}
+
+// UserProfile represents a detailed user profile
+type UserProfile struct {
+	ID              string        `json:"id"`
+	Name            string        `json:"name"`
+	Username        string        `json:"username"`
+	Description     string        `json:"description,omitempty"`
+	ProfileImageURL string        `json:"profile_image_url,omitempty"`
+	CreatedAt       string        `json:"created_at,omitempty"`
+	PublicMetrics   *UserMetrics  `json:"public_metrics,omitempty"`
+}
+
+// UserMetrics represents user engagement metrics
+type UserMetrics struct {
+	FollowersCount int `json:"followers_count"`
+	FollowingCount int `json:"following_count"`
+	TweetCount     int `json:"tweet_count"`
+	ListedCount    int `json:"listed_count"`
+}
+
+// GetUserProfile gets a user's full profile by username (v2 API)
+func (c *Client) GetUserProfile(username string) (*UserProfile, error) {
+	endpoint := fmt.Sprintf("/users/by/username/%s?user.fields=description,public_metrics,created_at,profile_image_url", username)
+
+	body, err := c.doRequestV2("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data UserProfile `json:"data"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse user profile: %w", err)
+	}
+
+	return &response.Data, nil
+}
+
+// GetUserTweets gets recent tweets from a specific user (v2 API)
+func (c *Client) GetUserTweets(userID string, maxResults int) (*TweetsResponse, error) {
+	if maxResults <= 0 {
+		maxResults = 10
+	}
+	if maxResults > 100 {
+		maxResults = 100
+	}
+
+	endpoint := fmt.Sprintf("/users/%s/tweets?max_results=%d&tweet.fields=created_at,author_id,public_metrics&expansions=author_id", userID, maxResults)
+
+	body, err := c.doRequestV2("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response TweetsResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse user tweets: %w", err)
+	}
+
+	return &response, nil
+}
+
+// BookmarkTweet bookmarks a tweet (v2 API)
+func (c *Client) BookmarkTweet(userID, tweetID string) error {
+	payload := map[string]string{
+		"tweet_id": tweetID,
+	}
+
+	_, err := c.doRequestV2("POST", "/users/"+userID+"/bookmarks", payload)
+	return err
+}
+
+// RemoveBookmark removes a bookmark from a tweet (v2 API)
+func (c *Client) RemoveBookmark(userID, tweetID string) error {
+	_, err := c.doRequestV2("DELETE", "/users/"+userID+"/bookmarks/"+tweetID, nil)
+	return err
+}
+
+// GetBookmarks gets the authenticated user's bookmarks (v2 API)
+func (c *Client) GetBookmarks(userID string, maxResults int) (*TweetsResponse, error) {
+	if maxResults <= 0 {
+		maxResults = 10
+	}
+	if maxResults > 100 {
+		maxResults = 100
+	}
+
+	endpoint := fmt.Sprintf("/users/%s/bookmarks?max_results=%d&tweet.fields=created_at,author_id,public_metrics&expansions=author_id", userID, maxResults)
+
+	body, err := c.doRequestV2("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response TweetsResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse bookmarks: %w", err)
+	}
+
+	return &response, nil
+}
+
+// PostThread posts a thread of tweets (v2 API)
+func (c *Client) PostThread(tweets []string) ([]*Tweet, error) {
+	var postedTweets []*Tweet
+	var replyToID string
+
+	for _, text := range tweets {
+		tweet, err := c.PostTweet(text, replyToID)
+		if err != nil {
+			return postedTweets, fmt.Errorf("failed to post tweet in thread: %w", err)
+		}
+		postedTweets = append(postedTweets, tweet)
+		replyToID = tweet.ID
+	}
+
+	return postedTweets, nil
+}
+
+// SendDM sends a direct message to a user (v2 API)
+func (c *Client) SendDM(participantID, text string) error {
+	payload := map[string]interface{}{
+		"text": text,
+	}
+
+	_, err := c.doRequestV2("POST", "/dm_conversations/with/"+participantID+"/messages", payload)
+	return err
+}
+
+// DMConversation represents a DM conversation
+type DMConversation struct {
+	ID               string `json:"id"`
+	Text             string `json:"text"`
+	SenderID         string `json:"sender_id"`
+	CreatedAt        string `json:"created_at,omitempty"`
+}
+
+// GetDMEvents gets recent DM events (v2 API)
+func (c *Client) GetDMEvents(maxResults int) ([]DMConversation, error) {
+	if maxResults <= 0 {
+		maxResults = 10
+	}
+	if maxResults > 100 {
+		maxResults = 100
+	}
+
+	endpoint := fmt.Sprintf("/dm_events?max_results=%d&dm_event.fields=text,sender_id,created_at", maxResults)
+
+	body, err := c.doRequestV2("GET", endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var response struct {
+		Data []DMConversation `json:"data"`
+	}
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse DM events: %w", err)
+	}
+
+	return response.Data, nil
+}
+
+// MediaUploadResponse represents the response from media upload
+type MediaUploadResponse struct {
+	MediaID       int64  `json:"media_id"`
+	MediaIDString string `json:"media_id_string"`
+}
+
+// UploadMedia uploads media (image) to Twitter (v1.1 API)
+func (c *Client) UploadMedia(imageData []byte) (*MediaUploadResponse, error) {
+	// Base64 encode the image
+	encoded := base64.StdEncoding.EncodeToString(imageData)
+
+	params := url.Values{}
+	params.Set("media_data", encoded)
+
+	body, err := c.doRequestV1Form("/media/upload.json", params)
+	if err != nil {
+		return nil, err
+	}
+
+	var response MediaUploadResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse media upload response: %w", err)
+	}
+
+	return &response, nil
+}
+
+// PostTweetWithMedia posts a tweet with media attachments (v2 API)
+func (c *Client) PostTweetWithMedia(text string, mediaIDs []string) (*Tweet, error) {
+	payload := map[string]interface{}{
+		"text": text,
+	}
+
+	if len(mediaIDs) > 0 {
+		payload["media"] = map[string]interface{}{
+			"media_ids": mediaIDs,
+		}
+	}
+
+	body, err := c.doRequestV2("POST", "/tweets", payload)
+	if err != nil {
+		return nil, err
+	}
+
+	var response TweetResponse
+	if err := json.Unmarshal(body, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse tweet response: %w", err)
+	}
+
+	return response.Data, nil
 }

@@ -185,4 +185,109 @@ func (tm *ToolsManager) AddTools() {
 		),
 	)
 	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolUndoRetweet))
+
+	// follow_user - Follow a user
+	tool = mcp.NewTool("follow_user",
+		mcp.WithDescription("Follow a Twitter user"),
+		mcp.WithString("username",
+			mcp.Required(),
+			mcp.Description("The username of the user to follow (without @)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolFollowUser))
+
+	// unfollow_user - Unfollow a user
+	tool = mcp.NewTool("unfollow_user",
+		mcp.WithDescription("Unfollow a Twitter user"),
+		mcp.WithString("username",
+			mcp.Required(),
+			mcp.Description("The username of the user to unfollow (without @)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolUnfollowUser))
+
+	// get_user_profile - Get a user's profile
+	tool = mcp.NewTool("get_user_profile",
+		mcp.WithDescription("Get a Twitter user's profile information including bio, followers count, etc."),
+		mcp.WithString("username",
+			mcp.Required(),
+			mcp.Description("The username of the user (without @)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetUserProfile))
+
+	// get_user_tweets - Get a user's recent tweets
+	tool = mcp.NewTool("get_user_tweets",
+		mcp.WithDescription("Get recent tweets from a specific user"),
+		mcp.WithString("username",
+			mcp.Required(),
+			mcp.Description("The username of the user (without @)"),
+		),
+		mcp.WithNumber("max_results",
+			mcp.Description("Maximum number of tweets to return (default: 10, max: 100)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetUserTweets))
+
+	// bookmark_tweet - Bookmark a tweet
+	tool = mcp.NewTool("bookmark_tweet",
+		mcp.WithDescription("Bookmark a tweet for later"),
+		mcp.WithString("tweet_id",
+			mcp.Required(),
+			mcp.Description("The ID of the tweet to bookmark"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolBookmarkTweet))
+
+	// remove_bookmark - Remove a bookmark
+	tool = mcp.NewTool("remove_bookmark",
+		mcp.WithDescription("Remove a bookmark from a tweet"),
+		mcp.WithString("tweet_id",
+			mcp.Required(),
+			mcp.Description("The ID of the tweet to remove from bookmarks"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolRemoveBookmark))
+
+	// get_bookmarks - Get bookmarked tweets
+	tool = mcp.NewTool("get_bookmarks",
+		mcp.WithDescription("Get your bookmarked tweets"),
+		mcp.WithNumber("max_results",
+			mcp.Description("Maximum number of bookmarks to return (default: 10, max: 100)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetBookmarks))
+
+	// post_thread - Post a thread of tweets
+	tool = mcp.NewTool("post_thread",
+		mcp.WithDescription("Post a thread (multiple connected tweets)"),
+		mcp.WithArray("tweets",
+			mcp.Required(),
+			mcp.Description("Array of tweet texts to post as a thread (first tweet is the head)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolPostThread))
+
+	// send_dm - Send a direct message
+	tool = mcp.NewTool("send_dm",
+		mcp.WithDescription("Send a direct message to a user"),
+		mcp.WithString("username",
+			mcp.Required(),
+			mcp.Description("The username of the recipient (without @)"),
+		),
+		mcp.WithString("text",
+			mcp.Required(),
+			mcp.Description("The message text"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolSendDM))
+
+	// get_dms - Get recent direct messages
+	tool = mcp.NewTool("get_dms",
+		mcp.WithDescription("Get recent direct messages"),
+		mcp.WithNumber("max_results",
+			mcp.Description("Maximum number of DMs to return (default: 10, max: 100)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolGetDMs))
 }

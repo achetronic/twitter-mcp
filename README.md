@@ -6,18 +6,25 @@
   <em>A Model Context Protocol server that lets AI assistants interact with Twitter/X.<br/>Built in Go, designed to be simple and useful.</em>
 </p>
 
+<p align="center">
+  <a href="#-getting-started">Getting Started</a> •
+  <a href="#-available-tools">Tools</a> •
+  <a href="#-authentication--security">Security</a> •
+  <a href="#-docker">Docker</a> •
+  <a href="#-contributing">Contributing</a>
+</p>
+
 ---
 
 ## 🎯 What can it do?
 
 This MCP gives your AI assistant the ability to:
 
-- **Read** your timeline, mentions, and search for tweets
-- **Write** posts, replies, likes, and retweets
+- **Read** your timeline, mentions, search tweets, and explore user profiles
+- **Write** posts, threads, replies, likes, retweets, and DMs
 - **Analyze** topic popularity with a heat score system
 - **Explore** trending topics by location
-
-The heat score feature is particularly interesting: give it a list of topics and it will tell you which ones are getting more traction right now, based on tweet volume and engagement metrics.
+- **Manage** bookmarks and follow/unfollow users
 
 ## 🚀 Getting started
 
@@ -64,9 +71,6 @@ server:
       host: ":8080"
 
 middleware:
-  access_logs:
-    excluded_headers: ["Accept", "Accept-Encoding"]
-    redacted_headers: ["Authorization"]
   jwt:
     enabled: true
     validation:
@@ -86,15 +90,8 @@ See `docs/config-stdio.yaml` and `docs/config-http.yaml` for full examples.
 
 ```bash
 go mod tidy
-go build -o twitter-mcp ./cmd/main.go
-./twitter-mcp -config config.yaml
-```
-
-Or use the Makefile:
-
-```bash
 make build
-make run
+./bin/twitter-mcp -config config.yaml
 ```
 
 ## 🛠️ Available tools
@@ -108,17 +105,27 @@ make run
 | `search_tweets` | Search tweets with any query |
 | `get_trends` | Get trending topics for a location |
 | `get_me` | Get your account info |
+| `get_user_profile` | Get a user's profile by username |
+| `get_user_tweets` | Get a user's recent tweets |
+| `get_bookmarks` | Get your bookmarked tweets |
+| `get_dms` | Get recent direct messages |
 
 ### Writing
 
 | Tool | What it does |
 |------|--------------|
 | `post_tweet` | Post a new tweet (supports replies) |
+| `post_thread` | Post a thread (multiple connected tweets) |
 | `delete_tweet` | Delete one of your tweets |
 | `like_tweet` | Like a tweet |
 | `unlike_tweet` | Remove a like |
 | `retweet` | Retweet something |
 | `undo_retweet` | Undo a retweet |
+| `bookmark_tweet` | Bookmark a tweet |
+| `remove_bookmark` | Remove a bookmark |
+| `follow_user` | Follow a user |
+| `unfollow_user` | Unfollow a user |
+| `send_dm` | Send a direct message |
 
 ### Analysis
 
@@ -153,7 +160,7 @@ When you call `get_topics_heat` with a list of topics, it returns something like
 ]
 ```
 
-The score (0-100) combines tweet volume and engagement. Results come sorted from hottest to coldest, so you can quickly see what's getting attention.
+The score (0-100) combines tweet volume and engagement. Results come sorted from hottest to coldest.
 
 ## 🔐 Authentication & Security
 
@@ -165,37 +172,51 @@ When running in HTTP mode, Twitter MCP supports:
 - **OAuth 2.0 metadata endpoints** (RFC 9728 compliant)
 - **Access logging** with header redaction
 
-This makes it suitable for production deployments behind an identity provider like Keycloak, Auth0, or similar.
-
 ### Tool Policies
 
-You can restrict which tools are available based on JWT claims. Policies are evaluated in order, and the first matching policy wins:
+Restrict tool access based on JWT claims:
 
 ```yaml
 policies:
   tools:
     # Admins can do everything
-    - expression: 'has(payload.groups) && payload.groups.exists(g, g == "admins")'
+    - expression: 'payload.groups.exists(g, g == "admins")'
       allowed_tools: ["*"]
     
     # Writers can post and read
-    - expression: 'has(payload.groups) && payload.groups.exists(g, g == "writers")'
-      allowed_tools:
-        - "post_tweet"
-        - "delete_tweet"
-        - "get_*"  # Wildcard support
+    - expression: 'payload.groups.exists(g, g == "writers")'
+      allowed_tools: ["post_*", "get_*", "like_*", "retweet"]
     
     # Readers can only read
-    - expression: 'has(payload.scope) && payload.scope.contains("twitter:read")'
-      allowed_tools:
-        - "get_timeline"
-        - "get_mentions"
-        - "search_*"
+    - expression: 'payload.scope.contains("twitter:read")'
+      allowed_tools: ["get_*", "search_*"]
 ```
 
-The `allowed_tools` field supports:
-- Exact matches: `"post_tweet"`
-- Wildcards: `"*"` (all tools) or `"get_*"` (prefix match)
+Supported patterns:
+- Exact match: `"post_tweet"`
+- Wildcard: `"*"` (all tools)
+- Prefix: `"get_*"` (all tools starting with `get_`)
+
+## 🐳 Docker
+
+### Build and run
+
+```bash
+docker build -t twitter-mcp .
+docker run -v $(pwd)/config.yaml:/config/config.yaml twitter-mcp
+```
+
+### Docker Compose
+
+```bash
+# Set environment variables
+export TWITTER_API_KEY=your_key
+export TWITTER_API_KEY_SECRET=your_secret
+# ... etc
+
+# Run
+docker-compose up -d
+```
 
 ## 🌍 Location codes for trends
 
@@ -210,6 +231,23 @@ The `get_trends` tool uses WOEIDs (Where On Earth IDs):
 | Madrid | 766273 |
 | Barcelona | 753692 |
 | New York | 2459115 |
+
+## 🔧 Troubleshooting
+
+### Rate limit exceeded
+Twitter API has strict rate limits. Wait a few minutes and try again, or reduce request frequency.
+
+### Could not authenticate you
+Check your OAuth credentials. For posting, you need OAuth 1.0a tokens (API key, secret, access token, access token secret). For reading, you need the Bearer token.
+
+### Tool access denied
+If policies are configured and you get "Access denied", ensure your JWT contains the required claims (groups, scopes) that match a policy.
+
+## 🤝 Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+For AI agents working on this codebase, see [AGENTS.md](AGENTS.md).
 
 ## 📄 License
 
