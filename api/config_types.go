@@ -130,4 +130,5 @@ type Configuration struct {
 	OAuthAuthorizationServer OAuthAuthorizationServer     `yaml:"oauth_authorization_server,omitempty"`
 	OAuthProtectedResource   OAuthProtectedResourceConfig `yaml:"oauth_protected_resource,omitempty"`
 	Twitter                  TwitterConfig                `yaml:"twitter"`
+	ScheduleFile             string                       `yaml:"schedule_file,omitempty"`
 }

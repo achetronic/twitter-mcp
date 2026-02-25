@@ -22,6 +22,7 @@ import (
 	"twitter-mcp/internal/globals"
 	"twitter-mcp/internal/handlers"
 	"twitter-mcp/internal/middlewares"
+	"twitter-mcp/internal/schedule"
 	"twitter-mcp/internal/tools"
 	"twitter-mcp/internal/twitter"
 
@@ -44,6 +45,16 @@ func main() {
 		appCtx.Config.Twitter.AccessTokenSecret,
 		appCtx.Config.Twitter.BearerToken,
 	)
+
+	// 2. Initialize schedule store
+	scheduleFile := appCtx.Config.ScheduleFile
+	if scheduleFile == "" {
+		scheduleFile = "schedule.yaml"
+	}
+	scheduleStore, err := schedule.NewStore(scheduleFile)
+	if err != nil {
+		log.Fatalf("failed creating schedule store: %v", err.Error())
+	}
 
 	// 2. Initialize middlewares that need it
 	accessLogsMw := middlewares.NewAccessLogsMiddleware(middlewares.AccessLogsMiddlewareDependencies{
@@ -88,6 +99,7 @@ func main() {
 		McpServer:     mcpServer,
 		Middlewares:   toolMiddlewares,
 		TwitterClient: twitterClient,
+		ScheduleStore: scheduleStore,
 	})
 	tm.AddTools()
 

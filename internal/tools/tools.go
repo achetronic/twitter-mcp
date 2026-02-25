@@ -17,6 +17,7 @@ package tools
 import (
 	"twitter-mcp/internal/globals"
 	"twitter-mcp/internal/middlewares"
+	"twitter-mcp/internal/schedule"
 	"twitter-mcp/internal/twitter"
 
 	"github.com/mark3labs/mcp-go/mcp"
@@ -29,6 +30,7 @@ type ToolsManagerDependencies struct {
 	McpServer     *server.MCPServer
 	Middlewares   []middlewares.ToolMiddleware
 	TwitterClient *twitter.Client
+	ScheduleStore *schedule.Store
 }
 
 type ToolsManager struct {
@@ -268,5 +270,81 @@ func (tm *ToolsManager) AddTools() {
 	)
 	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolPostThread))
 
+	// schedule_tweet - Schedule a tweet or thread
+	tool = mcp.NewTool("schedule_tweet",
+		mcp.WithDescription("Schedule a tweet or thread for later publishing. Content is always an array of strings (one element for a tweet, multiple for a thread)."),
+		mcp.WithString("type",
+			mcp.Required(),
+			mcp.Description("Type of content: 'tweet' or 'thread'"),
+		),
+		mcp.WithArray("content",
+			mcp.Required(),
+			mcp.Description("Array of strings. One element for a tweet, multiple for a thread."),
+		),
+		mcp.WithString("scheduled_at",
+			mcp.Required(),
+			mcp.Description("Date and time to publish, in RFC3339 format (e.g. 2026-02-25T10:00:00Z)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolScheduleTweet))
 
+	// schedule_update - Update a scheduled tweet
+	tool = mcp.NewTool("schedule_update",
+		mcp.WithDescription("Update a scheduled tweet or thread. Only provided fields will be updated."),
+		mcp.WithString("id",
+			mcp.Required(),
+			mcp.Description("ID of the scheduled tweet to update"),
+		),
+		mcp.WithString("type",
+			mcp.Description("Type of content: 'tweet' or 'thread'"),
+		),
+		mcp.WithArray("content",
+			mcp.Description("New content array"),
+		),
+		mcp.WithString("scheduled_at",
+			mcp.Description("New scheduled date in RFC3339 format"),
+		),
+		mcp.WithBoolean("reviewed",
+			mcp.Description("Mark as reviewed (true) or back to pending (false)"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolScheduleUpdate))
+
+	// schedule_delete - Delete a scheduled tweet
+	tool = mcp.NewTool("schedule_delete",
+		mcp.WithDescription("Delete a scheduled tweet by ID"),
+		mcp.WithString("id",
+			mcp.Required(),
+			mcp.Description("ID of the scheduled tweet to delete"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolScheduleDelete))
+
+	// schedule_list - List scheduled tweets
+	tool = mcp.NewTool("schedule_list",
+		mcp.WithDescription("List scheduled tweets, optionally filtered by status"),
+		mcp.WithString("status",
+			mcp.Description("Filter by status: 'pending', 'reviewed', 'published', 'failed'. Leave empty for all."),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolScheduleList))
+
+	// schedule_get_publishable - Get tweets ready to publish
+	tool = mcp.NewTool("schedule_get_publishable",
+		mcp.WithDescription("Get scheduled tweets that are ready to publish: reviewed, scheduled time is past, and enough time has passed since the last published tweet."),
+		mcp.WithNumber("min_hours_since_last",
+			mcp.Description("Minimum hours since last published tweet (default: 1). Use 0 to ignore."),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolScheduleGetPublishable))
+
+	// schedule_publish - Publish a scheduled tweet
+	tool = mcp.NewTool("schedule_publish",
+		mcp.WithDescription("Publish a specific scheduled tweet or thread by ID"),
+		mcp.WithString("id",
+			mcp.Required(),
+			mcp.Description("ID of the scheduled tweet to publish"),
+		),
+	)
+	tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolSchedulePublish))
 }
