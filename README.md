@@ -9,6 +9,7 @@
 <p align="center">
   <a href="#-getting-started">Getting Started</a> •
   <a href="#-available-tools">Tools</a> •
+  <a href="#-scheduling-tweets">Scheduling</a> •
   <a href="#-authentication--security">Security</a> •
   <a href="#-docker">Docker</a> •
   <a href="#-contributing">Contributing</a>
@@ -21,10 +22,11 @@
 This MCP gives your AI assistant the ability to:
 
 - **Read** your timeline, mentions, search tweets, and explore user profiles
-- **Write** posts, threads, replies, likes, retweets, and DMs
-- **Analyze** topic popularity with a heat score system
+- **Write** posts, threads, replies, likes, and retweets
+- **Analyze** topic popularity with a heat score system (last 24 hours)
 - **Explore** trending topics by location
 - **Manage** bookmarks and follow/unfollow users
+- **Schedule** tweets and threads for later publishing
 
 ## 🚀 Getting started
 
@@ -33,7 +35,7 @@ This MCP gives your AI assistant the ability to:
 Head to the [Twitter Developer Portal](https://developer.twitter.com/en/portal/dashboard) and create an app. You'll need:
 
 - **API Key & Secret** (for posting, liking, retweeting)
-- **Access Token & Secret** (for acting on behalf of your account)
+- **Access Token & Secret** (for acting on behalf of your account) — make sure permissions are set to **Read and Write**
 - **Bearer Token** (for reading public data)
 
 > ⚠️ Heads up: Twitter's free tier is very limited. For full functionality (trends, search, timeline), you'll need at least the Basic tier ($100/month).
@@ -57,6 +59,9 @@ twitter:
   access_token: "$TWITTER_ACCESS_TOKEN"
   access_token_secret: "$TWITTER_ACCESS_TOKEN_SECRET"
   bearer_token: "$TWITTER_BEARER_TOKEN"
+
+# Optional: path to the scheduling queue file (default: schedule.yaml)
+schedule_file: "schedule.yaml"
 ```
 
 #### HTTP (production, with auth support)
@@ -82,6 +87,8 @@ middleware:
 twitter:
   api_key: "$TWITTER_API_KEY"
   # ... rest of credentials
+
+schedule_file: "schedule.yaml"
 ```
 
 See `docs/config-stdio.yaml` and `docs/config-http.yaml` for full examples.
@@ -100,15 +107,14 @@ make build
 
 | Tool | What it does |
 |------|--------------|
+| `get_me` | Get your account info |
 | `get_timeline` | Fetch your home timeline |
 | `get_mentions` | See who's mentioning you |
-| `search_tweets` | Search tweets with any query |
+| `search_tweets` | Search tweets (last 24h, sorted by recency) |
 | `get_trends` | Get trending topics for a location |
-| `get_me` | Get your account info |
 | `get_user_profile` | Get a user's profile by username |
 | `get_user_tweets` | Get a user's recent tweets |
 | `get_bookmarks` | Get your bookmarked tweets |
-| `get_dms` | Get recent direct messages |
 
 ### Writing
 
@@ -125,14 +131,24 @@ make build
 | `remove_bookmark` | Remove a bookmark |
 | `follow_user` | Follow a user |
 | `unfollow_user` | Unfollow a user |
-| `send_dm` | Send a direct message |
 
 ### Analysis
 
 | Tool | What it does |
 |------|--------------|
-| `search_topics` | Search multiple topics at once |
-| `get_topics_heat` | Compare topic popularity with heat scores |
+| `search_topics` | Search multiple topics at once (last 24h) |
+| `get_topics_heat` | Compare topic popularity with heat scores (last 24h) |
+
+### Scheduling
+
+| Tool | What it does |
+|------|--------------|
+| `schedule_tweet` | Add a tweet or thread to the scheduling queue |
+| `schedule_update` | Modify a scheduled tweet (content, date, reviewed status) |
+| `schedule_delete` | Remove a scheduled tweet from the queue |
+| `schedule_list` | List all scheduled tweets, optionally filtered by status |
+| `schedule_get_publishable` | Get tweets ready to publish |
+| `schedule_publish` | Publish a specific scheduled tweet by ID |
 
 ## 🔥 The heat score explained
 
@@ -160,7 +176,49 @@ When you call `get_topics_heat` with a list of topics, it returns something like
 ]
 ```
 
-The score (0-100) combines tweet volume and engagement. Results come sorted from hottest to coldest.
+The score (0-100) combines tweet volume and engagement. Results come sorted from hottest to coldest. Only tweets from the **last 24 hours** are considered, sorted by recency.
+
+## 📅 Scheduling tweets
+
+The scheduling system lets you queue tweets and threads for later publishing. Everything is stored in a local YAML file, so it survives restarts.
+
+### How it works
+
+1. **Add** a tweet or thread with `schedule_tweet` — set the content, date, and type
+2. **Review** it with `schedule_update` (set `reviewed: true`) when you're happy with it
+3. When the time comes, the AI calls `schedule_get_publishable` to check what's ready
+4. The AI calls `schedule_publish` with the ID to publish it
+
+The AI is always in the loop — nothing publishes automatically.
+
+### Statuses
+
+| Status | Meaning |
+|--------|---------|
+| `pending` | Added but not reviewed yet |
+| `reviewed` | Approved, ready to publish when time arrives |
+| `published` | Successfully posted |
+| `failed` | Something went wrong (check `fail_reason`) |
+
+### Example
+
+```
+AI: schedule_tweet
+  type: "tweet"
+  content: ["Just shipped a new feature 🚀"]
+  scheduled_at: "2026-02-25T10:00:00Z"
+
+AI: schedule_update
+  id: "abc-123"
+  reviewed: true
+
+# Later...
+AI: schedule_get_publishable
+  min_hours_since_last: 2
+
+AI: schedule_publish
+  id: "abc-123"
+```
 
 ## 🔐 Authentication & Security
 
@@ -185,7 +243,7 @@ policies:
     
     # Writers can post and read
     - expression: 'payload.groups.exists(g, g == "writers")'
-      allowed_tools: ["post_*", "get_*", "like_*", "retweet"]
+      allowed_tools: ["post_*", "get_*", "like_*", "retweet", "schedule_*"]
     
     # Readers can only read
     - expression: 'payload.scope.contains("twitter:read")'
@@ -238,16 +296,22 @@ The `get_trends` tool uses WOEIDs (Where On Earth IDs):
 Twitter API has strict rate limits. Wait a few minutes and try again, or reduce request frequency.
 
 ### Could not authenticate you
-Check your OAuth credentials. For posting, you need OAuth 1.0a tokens (API key, secret, access token, access token secret). For reading, you need the Bearer token.
+Check your OAuth credentials. For posting, you need OAuth 1.0a tokens with **Read and Write** permissions. If you changed permissions after generating tokens, regenerate them from the Developer Portal.
+
+### CreditsDepleted
+You've run out of API credits. Check your Twitter Developer Portal to top up or wait for the monthly reset.
 
 ### Tool access denied
 If policies are configured and you get "Access denied", ensure your JWT contains the required claims (groups, scopes) that match a policy.
+
+### Scheduled tweet not appearing in get_publishable
+Check that: (1) the tweet has `reviewed: true`, (2) `scheduled_at` is in the past, (3) enough time has passed since the last published tweet (`min_hours_since_last`).
 
 ## 🤝 Contributing
 
 Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-For AI agents working on this codebase, see [AGENTS.md](AGENTS.md).
+For AI agents working on this codebase, see [AGENTS.md](.agents/AGENTS.md).
 
 ## 📄 License
 

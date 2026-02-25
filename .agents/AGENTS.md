@@ -4,14 +4,15 @@ This document helps AI agents work effectively in this repository.
 
 ## Project Overview
 
-**Twitter MCP** is a production-ready MCP (Model Context Protocol) server for Twitter/X API integration. Built in Go, it allows AI assistants to read, write, and analyze Twitter content with full OAuth support and JWT-based access control.
+**Twitter MCP** is a production-ready MCP (Model Context Protocol) server for Twitter/X API integration. Built in Go, it allows AI assistants to read, write, analyze Twitter content, and schedule tweets with full OAuth support and JWT-based access control.
 
 ### Key Technologies
 - **Language**: Go 1.24+
-- **MCP Library**: `github.com/mark3labs/mcp-go` v0.43.2
+- **MCP Library**: `github.com/mark3labs/mcp-go` v0.44.0
 - **Twitter Auth**: `github.com/dghubble/oauth1` for OAuth 1.0a
 - **JWT Handling**: `github.com/golang-jwt/jwt/v5`
 - **CEL Expressions**: `github.com/google/cel-go` for policy evaluation
+- **UUID**: `github.com/google/uuid` for scheduled tweet IDs
 - **Configuration**: YAML with environment variable expansion
 
 ## Commands
@@ -49,7 +50,8 @@ docker-compose up -d
 ├── cmd/
 │   └── main.go              # Application entrypoint
 ├── api/
-│   └── config_types.go      # Configuration type definitions
+│   ├── config_types.go      # Configuration type definitions
+│   └── schedule_types.go    # ScheduledTweet and ScheduleStore types
 ├── internal/
 │   ├── config/
 │   │   └── config.go        # YAML config parsing with env expansion
@@ -67,9 +69,13 @@ docker-compose up -d
 │   │   ├── noop.go                  # No-op middleware
 │   │   ├── tool_policy.go           # Tool access control based on JWT claims
 │   │   └── utils.go                 # Shared utilities
+│   ├── schedule/
+│   │   └── store.go         # YAML-backed persistent store for scheduled tweets
 │   ├── tools/
-│   │   ├── tools.go         # ToolsManager - tool registration
-│   │   └── handlers.go      # Tool handler implementations
+│   │   ├── tools.go                 # ToolsManager - tool registration
+│   │   ├── handlers.go              # Twitter tool handler implementations
+│   │   ├── schedule_handlers.go     # Schedule tool handler implementations
+│   │   └── helpers.go               # getArgs, getString, getInt, getStringSlice
 │   └── twitter/
 │       └── client.go        # Twitter API client (v1.1 and v2)
 ├── docs/
@@ -89,6 +95,7 @@ type ToolsManagerDependencies struct {
     McpServer     *server.MCPServer
     Middlewares   []middlewares.ToolMiddleware
     TwitterClient *twitter.Client
+    ScheduleStore *schedule.Store
 }
 ```
 
@@ -100,6 +107,7 @@ Tool middlewares wrap tool handlers: `toolPolicy -> actualToolHandler`
 - Config is loaded from YAML file
 - Environment variables are expanded (`$VAR` or `${VAR}`)
 - Config is available globally via `appCtx.Config`
+- Schedule file path configured via `schedule_file` (default: `schedule.yaml`)
 
 ## Adding New Tools
 
@@ -115,10 +123,11 @@ tool = mcp.NewTool("my_new_tool",
 tm.dependencies.McpServer.AddTool(tool, tm.wrapWithMiddlewares(tm.HandleToolMyNewTool))
 ```
 
-2. Implement the handler in `internal/tools/handlers.go`:
+2. Implement the handler in `internal/tools/handlers.go` (or a new file):
 ```go
 func (tm *ToolsManager) HandleToolMyNewTool(ctx context.Context, request mcp.CallToolRequest) (*mcp.CallToolResult, error) {
-    param1, _ := request.Params.Arguments["param1"].(string)
+    args := getArgs(request)
+    param1 := getString(args, "param1", "")
     // Implementation
     return mcp.NewToolResultText(`{"success": true}`), nil
 }
@@ -129,29 +138,64 @@ func (tm *ToolsManager) HandleToolMyNewTool(ctx context.Context, request mcp.Cal
 ## Available Tools
 
 ### Reading
+- `get_me` - Current user info
 - `get_timeline` - Home timeline
 - `get_mentions` - Mentions
-- `search_tweets` - Search tweets
-- `get_trends` - Trending topics
-- `get_me` - Current user info
+- `search_tweets` - Search tweets (last 24h, sorted by recency)
+- `get_trends` - Trending topics by location (requires v1.1 API access)
 - `get_user_profile` - User profile by username
 - `get_user_tweets` - User's recent tweets
 - `get_bookmarks` - Saved bookmarks
-- `get_dms` - Direct messages
 
 ### Writing
-- `post_tweet` - Post a tweet
-- `delete_tweet` - Delete a tweet
+- `post_tweet` - Post a tweet (supports replies)
 - `post_thread` - Post a thread
+- `delete_tweet` - Delete a tweet
 - `like_tweet` / `unlike_tweet` - Like/unlike
 - `retweet` / `undo_retweet` - Retweet/undo
 - `bookmark_tweet` / `remove_bookmark` - Bookmark management
 - `follow_user` / `unfollow_user` - Follow/unfollow
-- `send_dm` - Send direct message
 
 ### Analysis
-- `search_topics` - Search multiple topics
-- `get_topics_heat` - Topic popularity analysis
+- `search_topics` - Search multiple topics at once (last 24h)
+- `get_topics_heat` - Topic popularity heat score (last 24h)
+
+### Scheduling
+- `schedule_tweet` - Add a tweet or thread to the scheduling queue
+- `schedule_update` - Modify a scheduled tweet (content, date, reviewed status)
+- `schedule_delete` - Remove a scheduled tweet from the queue
+- `schedule_list` - List scheduled tweets, optionally filtered by status
+- `schedule_get_publishable` - Get tweets ready to publish (reviewed + scheduled_at past + cooldown respected)
+- `schedule_publish` - Publish a specific scheduled tweet by ID
+
+## Scheduling System
+
+Tweets are stored in a YAML file (`schedule.yaml` by default, configurable via `schedule_file`).
+
+### Statuses
+- `pending` - Added but not reviewed yet
+- `reviewed` - Approved and ready to publish when scheduled_at arrives
+- `published` - Successfully published
+- `failed` - Publishing failed (see `fail_reason`)
+
+### Content format
+Content is always `[]string`. One element for a tweet, multiple for a thread. This keeps the code simple and consistent.
+
+### Publishing flow
+The AI is always in the loop. There is no background worker. The recommended flow is:
+1. Call `schedule_get_publishable` to check what's ready
+2. Decide which one to publish (respect timing, don't publish multiple at once)
+3. Call `schedule_publish` with the chosen ID
+
+## Twitter API Notes
+
+- **v1.1 API** (OAuth 1.0a): Used for media upload, trends
+- **v2 API** (Bearer token): Used for most read operations
+- **v2 API** (OAuth 1.0a User Context): Used for all write operations
+- **DMs removed**: Requires OAuth 2.0 with redirect callback — not suitable for self-hosted setups
+- **Free tier**: Very limited (posting only)
+- **Basic tier** ($100/mo): Full access to search, timeline, trends
+- **Search results**: Limited to last 24 hours, sorted by recency
 
 ## Tool Policies
 
@@ -163,15 +207,8 @@ policies:
     - expression: 'payload.groups.exists(g, g == "admins")'
       allowed_tools: ["*"]
     - expression: 'payload.scope.contains("twitter:read")'
-      allowed_tools: ["get_*", "search_*"]
+      allowed_tools: ["get_*", "search_*", "schedule_list", "schedule_get_publishable"]
 ```
-
-## Twitter API Notes
-
-- **v1.1 API** (OAuth 1.0a): Used for media upload, trends
-- **v2 API** (Bearer token): Used for most operations
-- **Free tier**: Very limited (posting only)
-- **Basic tier** ($100/mo): Full access to search, timeline, trends
 
 ## Testing
 
@@ -189,10 +226,16 @@ go tool cover -html=coverage.out
 ## Common Issues
 
 ### "Rate limit exceeded"
-Twitter API has strict rate limits. The client doesn't implement backoff - handle at application level.
+Twitter API has strict rate limits. The client doesn't implement backoff — handle at application level.
 
 ### "Could not authenticate you"
-Check OAuth credentials. For v1.1 API, you need all four OAuth 1.0a tokens. For v2 API, you need the Bearer token.
+Check OAuth credentials. For write operations, you need all four OAuth 1.0a tokens. For read operations, you need the Bearer token.
+
+### "CreditsDepleted"
+You've run out of API credits. Check your Twitter Developer Portal to top up or wait for the monthly reset.
 
 ### Tool not found in policies
 If policies are configured and a tool isn't in any `allowed_tools`, access is denied. Use `"*"` for admin access or `"get_*"` for prefix matching.
+
+### Scheduled tweet not appearing in get_publishable
+Check that: (1) the tweet has `reviewed: true`, (2) `scheduled_at` is in the past, (3) enough time has passed since the last published tweet (`min_hours_since_last`).
