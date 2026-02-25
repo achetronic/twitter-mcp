@@ -39,10 +39,8 @@ WORKDIR /app
 # Copy binary from builder
 COPY --from=builder /app/twitter-mcp .
 
-# Create non-root user and data directory
-RUN adduser -D -g '' appuser && \
-    mkdir -p /app/data && \
-    chown appuser:appuser /app/data
+# Create non-root user
+RUN adduser -D -g '' appuser
 USER appuser
 
 ENTRYPOINT ["./twitter-mcp"]
