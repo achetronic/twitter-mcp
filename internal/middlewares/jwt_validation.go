@@ -164,7 +164,7 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 				}
 
 				if out.Value() != true {
-					http.Error(rw, fmt.Sprintf("RBAC: Access Denied: JWT does not meet conditions"), http.StatusUnauthorized)
+					http.Error(rw, "RBAC: Access Denied: JWT does not meet conditions", http.StatusUnauthorized)
 					return
 				}
 			}
