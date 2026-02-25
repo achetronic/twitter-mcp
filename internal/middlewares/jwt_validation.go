@@ -138,7 +138,7 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 			tokenPayloadBytes, err := base64.RawURLEncoding.DecodeString(tokenStringParts[1])
 			if err != nil {
 				mw.dependencies.AppCtx.Logger.Error("error decoding JWT payload from base64", "error", err.Error())
-				http.Error(rw, fmt.Sprintf("RBAC: Access Denied: JWT Payload can not be decoded"), http.StatusUnauthorized)
+				http.Error(rw, "RBAC: Access Denied: JWT Payload can not be decoded", http.StatusUnauthorized)
 				return
 			}
 
@@ -146,7 +146,7 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 			err = json.Unmarshal(tokenPayloadBytes, &tokenPayload)
 			if err != nil {
 				mw.dependencies.AppCtx.Logger.Error("error decoding JWT payload from JSON", "error", err.Error())
-				http.Error(rw, fmt.Sprintf("RBAC: Access Denied: Internal Issue"), http.StatusUnauthorized)
+				http.Error(rw, "RBAC: Access Denied: Internal Issue", http.StatusUnauthorized)
 				return
 			}
 
@@ -159,7 +159,7 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 
 				if err != nil {
 					mw.dependencies.AppCtx.Logger.Error("CEL program evaluation error", "error", err.Error())
-					http.Error(rw, fmt.Sprintf("RBAC: Access Denied: Internal Issue"), http.StatusUnauthorized)
+					http.Error(rw, "RBAC: Access Denied: Internal Issue", http.StatusUnauthorized)
 					return
 				}
 

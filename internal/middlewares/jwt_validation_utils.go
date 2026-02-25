@@ -71,13 +71,14 @@ func (mw *JWTValidationMiddleware) cacheJWKS() {
 			mw.dependencies.AppCtx.Logger.Error("failed getting JWKS from remote", "error", err.Error())
 			goto haveANap
 		}
-		defer resp.Body.Close()
 
 		//
 		if err := json.NewDecoder(resp.Body).Decode(&jwks); err != nil {
+			resp.Body.Close()
 			mw.dependencies.AppCtx.Logger.Error("failed decoding JWKS from remote", "error", err.Error())
 			goto haveANap
 		}
+		resp.Body.Close()
 
 		//
 		mw.mutex.Lock()

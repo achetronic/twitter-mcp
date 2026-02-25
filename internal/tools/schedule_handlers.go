@@ -152,10 +152,12 @@ func (tm *ToolsManager) HandleToolSchedulePublish(ctx context.Context, request m
 		posted, err := tm.dependencies.TwitterClient.PostTweet(text, lastTweetID)
 		if err != nil {
 			// Mark as failed
-			tm.dependencies.ScheduleStore.Update(id, func(t *api.ScheduledTweet) {
+			if updateErr := tm.dependencies.ScheduleStore.Update(id, func(t *api.ScheduledTweet) {
 				t.Status = api.ScheduledTweetStatusFailed
 				t.FailReason = err.Error()
-			})
+			}); updateErr != nil {
+				return mcp.NewToolResultError(fmt.Sprintf("failed to publish tweet and could not update status: %s", updateErr.Error())), nil
+			}
 			return mcp.NewToolResultError(fmt.Sprintf("failed to publish tweet: %s", err.Error())), nil
 		}
 		lastTweetID = posted.ID
@@ -163,10 +165,12 @@ func (tm *ToolsManager) HandleToolSchedulePublish(ctx context.Context, request m
 
 	// Mark as published
 	now := time.Now().UTC()
-	tm.dependencies.ScheduleStore.Update(id, func(t *api.ScheduledTweet) {
+	if updateErr := tm.dependencies.ScheduleStore.Update(id, func(t *api.ScheduledTweet) {
 		t.Status = api.ScheduledTweetStatusPublished
 		t.PublishedAt = &now
-	})
+	}); updateErr != nil {
+		return mcp.NewToolResultError(fmt.Sprintf("tweet published but could not update status: %s", updateErr.Error())), nil
+	}
 
 	return mcp.NewToolResultText(`{"success": true, "message": "Tweet published successfully"}`), nil
 }
