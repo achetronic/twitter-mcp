@@ -78,11 +78,8 @@ server:
 middleware:
   jwt:
     enabled: true
-    validation:
-      strategy: "local"
-      local:
-        jwks_uri: "https://your-idp.com/.well-known/jwks.json"
-        cache_interval: 5m
+    jwks_uri: "https://your-idp.com/.well-known/jwks.json"
+    cache_interval: 5m
 
 twitter:
   api_key: "$TWITTER_API_KEY"
@@ -222,13 +219,15 @@ AI: schedule_publish
 
 ## 🔐 Authentication & Security
 
-When running in HTTP mode, Twitter MCP supports:
+When running in HTTP mode, Twitter MCP validates JWTs locally using a JWKS endpoint:
 
-- **JWT validation** with JWKS endpoint caching
-- **CEL expressions** for fine-grained access control
+- **JWT validation** against a remote JWKS endpoint (with local caching)
+- **CEL expressions** for fine-grained allow conditions on the JWT payload
 - **Tool policies** based on JWT claims (groups, scopes, etc.)
 - **OAuth 2.0 metadata endpoints** (RFC 9728 compliant)
 - **Access logging** with header redaction
+
+The JWT payload is decoded and passed through the request context, making it available to tool policy middleware without any extra decoding.
 
 ### Tool Policies
 

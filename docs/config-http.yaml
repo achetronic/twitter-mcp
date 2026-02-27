@@ -1,5 +1,5 @@
 # Twitter MCP Configuration - HTTP mode with full auth and policies
-# Use this for production deployments with OAuth/JWT authentication
+# Use this for production deployments with JWT authentication
 
 server:
   name: "twitter-mcp"
@@ -20,15 +20,11 @@ middleware:
 
   jwt:
     enabled: true
-    validation:
-      strategy: "local"  # or "forwarded" if using Istio/Envoy
-      forwarded_header: "X-Validated-JWT"
-      local:
-        jwks_uri: "https://your-idp.com/.well-known/jwks.json"
-        cache_interval: 5m
-        allow_conditions:
-          - expression: 'has(payload.scope) && payload.scope.contains("twitter:read")'
-          - expression: 'payload.iss == "https://your-idp.com"'
+    jwks_uri: "https://your-idp.com/.well-known/jwks.json"
+    cache_interval: 5m
+    allow_conditions:
+      - expression: 'has(payload.scope) && payload.scope.contains("twitter:read")'
+      - expression: 'payload.iss == "https://your-idp.com"'
 
 # Tool access policies based on JWT claims
 # First matching policy wins - order matters!

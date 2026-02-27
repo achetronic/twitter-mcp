@@ -103,6 +103,21 @@ type ToolsManagerDependencies struct {
 HTTP middlewares wrap handlers: `accessLogs -> jwtValidation -> handler`
 Tool middlewares wrap tool handlers: `toolPolicy -> actualToolHandler`
 
+### JWT Middleware
+
+The JWT middleware validates tokens locally using a JWKS endpoint. On success, it decodes the payload and stores it as `map[string]interface{}` in the request context under `JWTContextKey`. Tool policy middleware reads from this context key directly — no re-decoding needed.
+
+Configuration:
+```yaml
+middleware:
+  jwt:
+    enabled: true
+    jwks_uri: "https://your-idp.com/.well-known/jwks.json"
+    cache_interval: 5m
+    allow_conditions:
+      - expression: 'payload.iss == "https://your-idp.com"'
+```
+
 ### Configuration
 - Config is loaded from YAML file
 - Environment variables are expanded (`$VAR` or `${VAR}`)
@@ -199,7 +214,7 @@ The AI is always in the loop. There is no background worker. The recommended flo
 
 ## Tool Policies
 
-Tools can be restricted based on JWT claims using CEL expressions:
+Tools can be restricted based on JWT claims using CEL expressions. The JWT payload is decoded by the HTTP middleware and passed through context — tool policy middleware reads it directly:
 
 ```yaml
 policies:
