@@ -28,10 +28,10 @@ import (
 	"github.com/google/cel-go/cel"
 )
 
-// JWTContextKey is the key used to store the JWT in context
+// JWTContextKey is the key used to store the JWT payload in context
 type contextKey string
 
-const JWTContextKey contextKey = "jwt_token"
+const JWTContextKey contextKey = "jwt_payload"
 
 type JWTValidationMiddlewareDependencies struct {
 	AppCtx *globals.ApplicationContext
@@ -54,9 +54,8 @@ func NewJWTValidationMiddleware(deps JWTValidationMiddlewareDependencies) (*JWTV
 		dependencies: deps,
 	}
 
-	// Launch JWKS worker only when requested
-	if mw.dependencies.AppCtx.Config.Middleware.JWT.Enabled &&
-		mw.dependencies.AppCtx.Config.Middleware.JWT.Validation.Strategy == "local" {
+	// Launch JWKS cache worker only when JWT middleware is enabled
+	if mw.dependencies.AppCtx.Config.Middleware.JWT.Enabled {
 		go mw.cacheJWKS()
 	}
 
@@ -69,7 +68,7 @@ func NewJWTValidationMiddleware(deps JWTValidationMiddlewareDependencies) (*JWTV
 		return nil, fmt.Errorf("CEL environment creation error: %s", err.Error())
 	}
 
-	for _, allowCondition := range mw.dependencies.AppCtx.Config.Middleware.JWT.Validation.Local.AllowConditions {
+	for _, allowCondition := range mw.dependencies.AppCtx.Config.Middleware.JWT.AllowConditions {
 
 		// Compile and execute the code
 		ast, issues := allowConditionsEnv.Compile(allowCondition.Expression)
@@ -107,13 +106,11 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 
 		rw.Header().Set("WWW-Authenticate",
 			`Bearer error="invalid_token", 
-							  resource_metadata="`+wwwAuthResourceMetadataUrl+`", 
-							  scope="`+wwwAuthScope+`"`)
+					  resource_metadata="`+wwwAuthResourceMetadataUrl+`", 
+					  scope="`+wwwAuthScope+`"`)
 
-		//
-		switch mw.dependencies.AppCtx.Config.Middleware.JWT.Validation.Strategy {
-		case "local":
-			// 1. Extract token from header
+		{
+			// 1. Extract token from Authorization header
 			authHeader := req.Header.Get("Authorization")
 			if authHeader == "" {
 				http.Error(rw, "RBAC: Access Denied: Authorization header not found", http.StatusUnauthorized)
@@ -121,20 +118,15 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 			}
 			tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
 
-			// Reject unauthorized requests
+			// 2. Validate token signature and expiry against JWKS
 			_, err := mw.isTokenValid(tokenString)
 			if err != nil {
 				http.Error(rw, fmt.Sprintf("RBAC: Access Denied: Invalid token: %v", err.Error()), http.StatusUnauthorized)
 				return
 			}
 
-			// Put the JWT into the validated request header
-			req.Header.Set(mw.dependencies.AppCtx.Config.Middleware.JWT.Validation.ForwardedHeader, tokenString)
-
-			// Extract the JWT payload
+			// 3. Decode the JWT payload
 			tokenStringParts := strings.Split(tokenString, ".")
-
-			// Decode it into a Go's structure for later
 			tokenPayloadBytes, err := base64.RawURLEncoding.DecodeString(tokenStringParts[1])
 			if err != nil {
 				mw.dependencies.AppCtx.Logger.Error("error decoding JWT payload from base64", "error", err.Error())
@@ -150,8 +142,7 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 				return
 			}
 
-			// Check allowance conditions for the JWT
-			// At this point, we assume the JWT is unmarshalled into a golang structure
+			// 4. Check allow conditions
 			for _, celProgram := range mw.celPrograms {
 				out, _, err := (*celProgram).Eval(map[string]interface{}{
 					"payload": tokenPayload,
@@ -169,20 +160,13 @@ func (mw *JWTValidationMiddleware) Middleware(next http.Handler) http.Handler {
 				}
 			}
 
-		default:
-			// Having a validated JWT into a specific header is the default behavior,
-			// as having tools like Istio securing APIs is much more safe and reliable
-			// When the token is already validated, do nothing.
+			// 5. Store the decoded payload in context for downstream use (tool policies, etc.)
+			ctx := context.WithValue(req.Context(), JWTContextKey, tokenPayload)
+			req = req.WithContext(ctx)
 		}
 
 	nextStage:
 		rw.Header().Del("WWW-Authenticate")
-		// Store the JWT in the request context for downstream use (e.g., tool policies)
-		if authHeader := req.Header.Get("Authorization"); authHeader != "" {
-			tokenString := strings.Replace(authHeader, "Bearer ", "", 1)
-			ctx := context.WithValue(req.Context(), JWTContextKey, tokenString)
-			req = req.WithContext(ctx)
-		}
 		next.ServeHTTP(rw, req)
 	})
 }

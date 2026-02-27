@@ -16,8 +16,6 @@ package middlewares
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -143,30 +141,12 @@ func (mw *ToolPolicyMiddleware) isToolAllowed(toolName string, allowedTools []st
 	return false
 }
 
-// extractJWTPayloadFromContext extracts the JWT payload from the context
-// This assumes the JWT was validated by the HTTP middleware and stored in context
+// extractJWTPayloadFromContext extracts the JWT payload from the context.
+// The payload is stored as map[string]interface{} by the JWT validation middleware.
 func (mw *ToolPolicyMiddleware) extractJWTPayloadFromContext(ctx context.Context) (map[string]interface{}, error) {
-	// Try to get JWT from context (set by HTTP middleware)
-	jwtToken, ok := ctx.Value(JWTContextKey).(string)
-	if !ok || jwtToken == "" {
-		return nil, fmt.Errorf("no JWT token in context")
+	payload, ok := ctx.Value(JWTContextKey).(map[string]interface{})
+	if !ok || payload == nil {
+		return nil, fmt.Errorf("no JWT payload in context")
 	}
-
-	// Parse the payload from the JWT
-	parts := strings.Split(jwtToken, ".")
-	if len(parts) != 3 {
-		return nil, fmt.Errorf("malformed JWT token")
-	}
-
-	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
-	if err != nil {
-		return nil, fmt.Errorf("error decoding JWT payload: %w", err)
-	}
-
-	var payload map[string]interface{}
-	if err := json.Unmarshal(payloadBytes, &payload); err != nil {
-		return nil, fmt.Errorf("error parsing JWT payload: %w", err)
-	}
-
 	return payload, nil
 }
