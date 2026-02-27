@@ -73,32 +73,32 @@
         font-weight="400"
         fill="#71767b">Model Context Protocol server for X</text>
 
-  <!-- Tag: Read -->
-  <rect x="664" y="370" width="90" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
-  <text x="709" y="398"
+  <!-- Tag: Trends -->
+  <rect x="664" y="370" width="100" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
+  <text x="714" y="398"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="20" font-weight="600" fill="#ffffff"
-        text-anchor="middle">Read</text>
+        text-anchor="middle">Trends</text>
 
-  <!-- Tag: Write -->
-  <rect x="766" y="370" width="96" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
-  <text x="814" y="398"
+  <!-- Tag: Analyze -->
+  <rect x="776" y="370" width="112" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
+  <text x="832" y="398"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="20" font-weight="600" fill="#ffffff"
-        text-anchor="middle">Write</text>
+        text-anchor="middle">Analyze</text>
 
   <!-- Tag: Schedule -->
-  <rect x="874" y="370" width="120" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
-  <text x="934" y="398"
+  <rect x="900" y="370" width="120" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
+  <text x="960" y="398"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="20" font-weight="600" fill="#ffffff"
         text-anchor="middle">Schedule</text>
 
-  <!-- Tag: Trending -->
-  <rect x="1006" y="370" width="120" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
-  <text x="1066" y="398"
+  <!-- Tag: Publish -->
+  <rect x="1032" y="370" width="108" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
+  <text x="1086" y="398"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="20" font-weight="600" fill="#ffffff"
-        text-anchor="middle">Trending</text>
+        text-anchor="middle">Publish</text>
 
 </svg>
