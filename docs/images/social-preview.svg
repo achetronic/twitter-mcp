@@ -49,7 +49,7 @@
   </g>
 
   <!-- ========== MAIN X LOGO (left side, large) ========== -->
-  <g transform="translate(200, 320)">
+  <g transform="translate(310, 320)">
     <path d="M-90,-112 L-18,-112 L38,-16 L96,-112 L144,-112 L58,16 L150,144 L80,144 L16,38 L-58,144 L-106,144 L-6,6 L-90,-112 Z"
           fill="white"/>
   </g>
