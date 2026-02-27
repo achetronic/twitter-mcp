@@ -49,54 +49,54 @@
   </g>
 
   <!-- ========== MAIN X LOGO (left side, large) ========== -->
-  <g transform="translate(310, 320)">
+  <g transform="translate(260, 320)">
     <path d="M-90,-112 L-18,-112 L38,-16 L96,-112 L144,-112 L58,16 L150,144 L80,144 L16,38 L-58,144 L-106,144 L-6,6 L-90,-112 Z"
           fill="white"/>
   </g>
 
   <!-- Vertical divider -->
-  <line x1="620" y1="80" x2="620" y2="560" stroke="#333333" stroke-width="1.5"/>
+  <line x1="520" y1="80" x2="520" y2="560" stroke="#333333" stroke-width="1.5"/>
 
   <!-- ========== TEXT (right side) ========== -->
 
   <!-- Title -->
-  <text x="660" y="255"
+  <text x="560" y="255"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="88"
         font-weight="700"
         fill="#ffffff">Twitter MCP</text>
 
   <!-- Slogan -->
-  <text x="664" y="318"
+  <text x="564" y="318"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="28"
         font-weight="400"
         fill="#71767b">Model Context Protocol server for X</text>
 
   <!-- Tag: Trends -->
-  <rect x="664" y="370" width="100" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
-  <text x="714" y="398"
+  <rect x="564" y="370" width="100" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
+  <text x="614" y="398"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="20" font-weight="600" fill="#ffffff"
         text-anchor="middle">Trends</text>
 
   <!-- Tag: Analyze -->
-  <rect x="776" y="370" width="112" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
-  <text x="832" y="398"
+  <rect x="676" y="370" width="112" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
+  <text x="732" y="398"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="20" font-weight="600" fill="#ffffff"
         text-anchor="middle">Analyze</text>
 
   <!-- Tag: Schedule -->
-  <rect x="900" y="370" width="120" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
-  <text x="960" y="398"
+  <rect x="800" y="370" width="120" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
+  <text x="860" y="398"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="20" font-weight="600" fill="#ffffff"
         text-anchor="middle">Schedule</text>
 
   <!-- Tag: Publish -->
-  <rect x="1032" y="370" width="108" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
-  <text x="1086" y="398"
+  <rect x="932" y="370" width="108" height="42" rx="6" fill="#ffffff" opacity="0.08"/>
+  <text x="986" y="398"
         font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"
         font-size="20" font-weight="600" fill="#ffffff"
         text-anchor="middle">Publish</text>
