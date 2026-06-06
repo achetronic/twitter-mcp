@@ -110,6 +110,13 @@ type TwitterConfig struct {
 	BearerToken string `yaml:"bearer_token"`
 }
 
+// XquikConfig represents optional Xquik read backend configuration
+type XquikConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	BaseURL string `yaml:"base_url,omitempty"`
+	APIKey  string `yaml:"api_key,omitempty"`
+}
+
 // Configuration represents the complete configuration structure
 type Configuration struct {
 	Server                   ServerConfig                 `yaml:"server,omitempty"`
@@ -118,5 +125,6 @@ type Configuration struct {
 	OAuthAuthorizationServer OAuthAuthorizationServer     `yaml:"oauth_authorization_server,omitempty"`
 	OAuthProtectedResource   OAuthProtectedResourceConfig `yaml:"oauth_protected_resource,omitempty"`
 	Twitter                  TwitterConfig                `yaml:"twitter"`
+	Xquik                    XquikConfig                  `yaml:"xquik,omitempty"`
 	ScheduleFile             string                       `yaml:"schedule_file,omitempty"`
 }

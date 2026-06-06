@@ -40,6 +40,14 @@ type Client struct {
 	// Bearer token for v2 API (read operations)
 	bearerToken string
 	httpClient  *http.Client
+	xquik       XquikConfig
+}
+
+// XquikConfig configures the optional Xquik backend for read-only operations
+type XquikConfig struct {
+	Enabled bool
+	BaseURL string
+	APIKey  string
 }
 
 // NewClient creates a new Twitter client
@@ -56,6 +64,51 @@ func NewClient(apiKey, apiKeySecret, accessToken, accessTokenSecret, bearerToken
 			Timeout: 30 * time.Second,
 		},
 	}
+}
+
+// ConfigureXquik enables an optional Xquik backend for supported read operations
+func (c *Client) ConfigureXquik(config XquikConfig) {
+	if config.BaseURL == "" {
+		config.BaseURL = "https://xquik.com"
+	}
+	config.BaseURL = strings.TrimRight(config.BaseURL, "/")
+	c.xquik = config
+}
+
+func (c *Client) useXquikReads() bool {
+	return c.xquik.Enabled && c.xquik.APIKey != ""
+}
+
+func (c *Client) doXquikRead(endpoint string, values url.Values) ([]byte, error) {
+	requestURL := c.xquik.BaseURL + endpoint
+	if len(values) > 0 {
+		requestURL += "?" + values.Encode()
+	}
+
+	req, err := http.NewRequest("GET", requestURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create Xquik request: %w", err)
+	}
+
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("X-API-Key", c.xquik.APIKey)
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute Xquik request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read Xquik response body: %w", err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("Xquik API error (status %d): %s", resp.StatusCode, string(respBody))
+	}
+
+	return respBody, nil
 }
 
 // doRequestV2OAuth1 performs an HTTP request to the Twitter v2 API using OAuth 1.0a user context
@@ -345,6 +398,21 @@ func (c *Client) SearchTweets(query string, maxResults int) (*TweetsResponse, er
 		maxResults = 100
 	}
 
+	if c.useXquikReads() {
+		values := url.Values{}
+		values.Set("q", query)
+		values.Set("limit", fmt.Sprintf("%d", maxResults))
+		body, err := c.doXquikRead("/api/v1/x/tweets/search", values)
+		if err != nil {
+			return nil, err
+		}
+		response, err := parseXquikTweetsResponse(body)
+		if err != nil {
+			return nil, err
+		}
+		return response, nil
+	}
+
 	// Only search tweets from the last 24 hours
 	startTime := time.Now().UTC().Add(-24 * time.Hour).Format(time.RFC3339)
 
@@ -582,6 +650,20 @@ func (c *Client) UnfollowUser(sourceUserID, targetUserID string) error {
 
 // GetUserByUsername gets a user's profile by username (v2 API)
 func (c *Client) GetUserByUsername(username string) (*User, error) {
+	if c.useXquikReads() {
+		values := url.Values{}
+		values.Set("q", username)
+		body, err := c.doXquikRead("/api/v1/x/users/search", values)
+		if err != nil {
+			return nil, err
+		}
+		user, err := parseXquikUserResponse(body)
+		if err != nil {
+			return nil, err
+		}
+		return user, nil
+	}
+
 	endpoint := fmt.Sprintf("/users/by/username/%s?user.fields=description,public_metrics,created_at,profile_image_url", username)
 
 	body, err := c.doRequestV2("GET", endpoint, nil)
@@ -605,13 +687,13 @@ func (c *Client) GetUserByUsername(username string) (*User, error) {
 
 // UserProfile represents a detailed user profile
 type UserProfile struct {
-	ID              string        `json:"id"`
-	Name            string        `json:"name"`
-	Username        string        `json:"username"`
-	Description     string        `json:"description,omitempty"`
-	ProfileImageURL string        `json:"profile_image_url,omitempty"`
-	CreatedAt       string        `json:"created_at,omitempty"`
-	PublicMetrics   *UserMetrics  `json:"public_metrics,omitempty"`
+	ID              string       `json:"id"`
+	Name            string       `json:"name"`
+	Username        string       `json:"username"`
+	Description     string       `json:"description,omitempty"`
+	ProfileImageURL string       `json:"profile_image_url,omitempty"`
+	CreatedAt       string       `json:"created_at,omitempty"`
+	PublicMetrics   *UserMetrics `json:"public_metrics,omitempty"`
 }
 
 // UserMetrics represents user engagement metrics

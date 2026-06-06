@@ -90,6 +90,25 @@ schedule_file: "schedule.yaml"
 
 See `docs/config-stdio.yaml` and `docs/config-http.yaml` for full examples.
 
+### Optional Xquik read backend
+
+You can route supported read-only calls through [Xquik](https://xquik.com)
+while keeping the built-in Twitter API client as the default backend. This is
+useful when you want the same MCP tools but prefer Xquik for tweet search and
+user lookup.
+
+```yaml
+xquik:
+  enabled: true
+  base_url: "${XQUIK_BASE_URL}"
+  api_key: "${XQUIK_API_KEY}"
+```
+
+`base_url` defaults to `https://xquik.com` when empty. When `xquik.enabled` is
+false or `xquik.api_key` is empty, all tools continue to use the existing
+Twitter API credentials. Write tools such as `post_tweet`, `like_tweet`, and
+`schedule_publish` are unchanged.
+
 ### 3. Build and run
 
 ```bash

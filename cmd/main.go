@@ -45,6 +45,11 @@ func main() {
 		appCtx.Config.Twitter.AccessTokenSecret,
 		appCtx.Config.Twitter.BearerToken,
 	)
+	twitterClient.ConfigureXquik(twitter.XquikConfig{
+		Enabled: appCtx.Config.Xquik.Enabled,
+		BaseURL: appCtx.Config.Xquik.BaseURL,
+		APIKey:  appCtx.Config.Xquik.APIKey,
+	})
 
 	// 2. Initialize schedule store
 	scheduleFile := appCtx.Config.ScheduleFile

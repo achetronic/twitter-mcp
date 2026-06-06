@@ -97,3 +97,10 @@ twitter:
   access_token: "$TWITTER_ACCESS_TOKEN"
   access_token_secret: "$TWITTER_ACCESS_TOKEN_SECRET"
   bearer_token: "$TWITTER_BEARER_TOKEN"
+
+# Optional: use Xquik for supported read-only operations such as tweet search
+# and user lookup. Existing Twitter API credentials remain the default backend.
+xquik:
+  enabled: false
+  base_url: "${XQUIK_BASE_URL}"
+  api_key: "${XQUIK_API_KEY}"
